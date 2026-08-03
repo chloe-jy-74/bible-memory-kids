@@ -12,6 +12,7 @@
  */
 
 import { CONFIG } from './config.js';
+import { getVoiceName, getSpeechRate } from './storage.js';
 
 export const CANCELLED = 'cancelled';
 
@@ -37,12 +38,43 @@ function release(canceller) {
 
 /* ── 음성 목록 준비 ─────────────────────────────── */
 
+/** 이 기기에 있는 한국어 음성 목록 (설정 화면에서 고를 수 있게) */
+export function getKoreanVoices() {
+  if (!isSpeechSupported()) return [];
+  return (speechSynthesis.getVoices() || [])
+    .filter(v => (v.lang || '').toLowerCase().startsWith('ko'));
+}
+
+/**
+ * 목소리 고르기
+ *   1) 부모가 설정에서 고른 목소리
+ *   2) config 의 preferredVoices 순서 (부드러운 목소리 우선)
+ *   3) 기기 기본 한국어 음성
+ */
 function loadVoices() {
   if (!isSpeechSupported()) return;
-  const voices = speechSynthesis.getVoices() || [];
-  const ko = voices.filter(v => (v.lang || '').toLowerCase().startsWith('ko'));
-  koVoice = ko.find(v => v.default) || ko[0] || null;
+  const ko = getKoreanVoices();
+
+  const chosen = getVoiceName();
+  const byName = chosen && ko.find(v => v.name === chosen);
+
+  const preferred = !byName && CONFIG.speech.preferredVoices
+    .map(want => ko.find(v => v.name.toLowerCase().includes(want.toLowerCase())))
+    .find(Boolean);
+
+  koVoice = byName || preferred || ko.find(v => v.default) || ko[0] || null;
   voicesReady = !!koVoice;
+}
+
+/** 설정에서 목소리를 바꾼 뒤 즉시 반영 */
+export function refreshVoice() {
+  loadVoices();
+  return koVoice ? koVoice.name : '';
+}
+
+/** 지금 쓰고 있는 목소리 이름 */
+export function getCurrentVoiceName() {
+  return koVoice ? koVoice.name : '';
 }
 
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -142,7 +174,7 @@ function playTts(text) {
   return new Promise((resolve, reject) => {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = CONFIG.speech.lang;
-    u.rate = CONFIG.speech.rate;
+    u.rate = currentRate();
     u.pitch = CONFIG.speech.pitch;
     u.volume = CONFIG.speech.volume;
     if (koVoice) u.voice = koVoice;
@@ -221,7 +253,12 @@ function playAudioFile(url, fallbackText) {
   });
 }
 
+/** 부모가 설정에서 고른 속도가 있으면 그것을, 없으면 기본값을 씁니다 */
+function currentRate() {
+  return getSpeechRate() || CONFIG.speech.rate;
+}
+
 function estimateMs(text) {
-  const { charMs, padMs, rate } = CONFIG.speech;
-  return (text.length * charMs) / (rate || 1) + padMs;
+  const { charMs, padMs } = CONFIG.speech;
+  return (text.length * charMs) / (currentRate() || 1) + padMs;
 }

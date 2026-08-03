@@ -17,7 +17,7 @@ import {
 import { buildMonthSet, buildRandomSet, pickPraise, pickOne } from './questions.js';
 import {
   speak, pause, stopSpeaking, speakSequence, ignoreCancel,
-  isSpeechSupported, hasKoreanVoice,
+  isSpeechSupported, hasKoreanVoice, getKoreanVoices, refreshVoice,
 } from './speech.js';
 import {
   ensureMic, isMicReady, getMicPermission, listenForVoice, cancelListening, releaseMic,
@@ -739,6 +739,52 @@ function SettingsScreen() {
   nameInput.placeholder = '예: 하은';
   nameInput.addEventListener('change', () => store.setChildName(nameInput.value));
   holder.appendChild(nameInput);
+
+  // 읽어주는 목소리 — 기기마다 있는 음성이 달라서 부모가 직접 고를 수 있게 했습니다
+  holder.appendChild(el('label', 'field-label', '읽어주는 목소리'));
+  const voices = getKoreanVoices();
+  if (!voices.length) {
+    holder.appendChild(el('p', 'field-hint',
+      '이 기기에는 한국어 음성이 없어요. 크롬이나 사파리로 열거나, 기기 설정에서 한국어 음성을 추가해 주세요.'));
+  } else {
+    const voiceSelect = el('select', 'text-input');
+    const auto = el('option', null, '자동 (부드러운 목소리 먼저)');
+    auto.value = '';
+    voiceSelect.appendChild(auto);
+    voices.forEach(v => {
+      const opt = el('option', null, v.name);
+      opt.value = v.name;
+      if (v.name === store.getVoiceName()) opt.selected = true;
+      voiceSelect.appendChild(opt);
+    });
+    voiceSelect.addEventListener('change', () => {
+      store.setVoiceName(voiceSelect.value);
+      refreshVoice();
+      speak(CONFIG.speech.sampleText).catch(ignoreCancel);   // 고르면 바로 들려줍니다
+    });
+    holder.appendChild(voiceSelect);
+  }
+
+  // 말하기 속도
+  holder.appendChild(el('label', 'field-label', '말하기 속도'));
+  const rateSeg = el('div', 'segmented');
+  const nowRate = store.getSpeechRate() || CONFIG.speech.rate;
+  const rateButtons = CONFIG.speech.rateOptions.map(opt => {
+    const b = el('button', 'seg-btn', opt.label);
+    b.classList.toggle('is-on', Math.abs(nowRate - opt.rate) < 0.001);
+    b.addEventListener('click', () => {
+      store.setSpeechRate(opt.rate);
+      rateButtons.forEach((x, i) => x.classList.toggle('is-on', CONFIG.speech.rateOptions[i].rate === opt.rate));
+      speak(CONFIG.speech.sampleText).catch(ignoreCancel);
+    });
+    rateSeg.appendChild(b);
+    return b;
+  });
+  holder.appendChild(rateSeg);
+
+  const preview = el('button', 'wide-btn', '🔊 들어보기');
+  preview.addEventListener('click', () => speak(CONFIG.speech.sampleText).catch(ignoreCancel));
+  holder.appendChild(preview);
 
   // 현재 월 (랜덤 퀴즈 범위)
   holder.appendChild(el('label', 'field-label', '지금 배우는 달 (랜덤 퀴즈 범위)'));
