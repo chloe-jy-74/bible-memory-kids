@@ -1,0 +1,431 @@
+{
+  "count": 71,
+  "images": [
+    {
+      "file": "images/jesus.png",
+      "label": "예수님",
+      "note": null,
+      "category": "인물"
+    },
+    {
+      "file": "images/god.png",
+      "label": "하나님",
+      "note": null,
+      "category": "인물"
+    },
+    {
+      "file": "images/angel.png",
+      "label": "천사",
+      "note": null,
+      "category": "인물"
+    },
+    {
+      "file": "images/baby_jesus.png",
+      "label": "구주",
+      "note": null,
+      "category": "인물"
+    },
+    {
+      "file": "images/women.png",
+      "label": "여자들",
+      "note": null,
+      "category": "인물"
+    },
+    {
+      "file": "images/men.png",
+      "label": "남자들",
+      "note": null,
+      "category": "인물"
+    },
+    {
+      "file": "images/pastor.png",
+      "label": "목사님",
+      "note": null,
+      "category": "인물"
+    },
+    {
+      "file": "images/m01_cloud_baby.png",
+      "label": "구름 위 아기천사",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m02_giraffe.png",
+      "label": "기린",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m03_rabbit.png",
+      "label": "토끼",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m04_chick.png",
+      "label": "병아리",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m05_bouquet.png",
+      "label": "꽃다발",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m06_dragonfly.png",
+      "label": "잠자리",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m07_butterfly.png",
+      "label": "나비",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m08_snail.png",
+      "label": "달팽이",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m09_fruit_basket.png",
+      "label": "과일바구니",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m10_raccoon.png",
+      "label": "너구리",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m11_snowman.png",
+      "label": "눈사람",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/m12_bell.png",
+      "label": "종",
+      "note": null,
+      "category": "도감"
+    },
+    {
+      "file": "images/church.png",
+      "label": "교회",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/temple.png",
+      "label": "성전",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/house.png",
+      "label": "집",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/school.png",
+      "label": "학교",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/hospital.png",
+      "label": "병원",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/playground.png",
+      "label": "놀이터",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/mart.png",
+      "label": "마트",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/sea.png",
+      "label": "바다",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/market.png",
+      "label": "시장",
+      "note": null,
+      "category": "장소"
+    },
+    {
+      "file": "images/bread.png",
+      "label": "떡",
+      "note": null,
+      "category": "사물"
+    },
+    {
+      "file": "images/rice.png",
+      "label": "밥",
+      "note": null,
+      "category": "사물"
+    },
+    {
+      "file": "images/snack.png",
+      "label": "과자",
+      "note": null,
+      "category": "사물"
+    },
+    {
+      "file": "images/candy.png",
+      "label": "사탕",
+      "note": null,
+      "category": "사물"
+    },
+    {
+      "file": "images/toy.png",
+      "label": "장난감",
+      "note": null,
+      "category": "사물"
+    },
+    {
+      "file": "images/money.png",
+      "label": "돈",
+      "note": null,
+      "category": "사물"
+    },
+    {
+      "file": "images/gift.png",
+      "label": "선물",
+      "note": null,
+      "category": "사물"
+    },
+    {
+      "file": "images/sun_moon.png",
+      "label": "해와 달",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/water_fire.png",
+      "label": "물과 불",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/wind.png",
+      "label": "바람",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/stone.png",
+      "label": "돌",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/tree.png",
+      "label": "나무",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/animals.png",
+      "label": "동물",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/caterpillar.png",
+      "label": "애벌레",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/frog.png",
+      "label": "개구리",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/bird.png",
+      "label": "새",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/doll.png",
+      "label": "인형",
+      "note": null,
+      "category": "자연"
+    },
+    {
+      "file": "images/wisdom.png",
+      "label": "지혜",
+      "note": "많이 알고 바르게 생각하는 것",
+      "category": "추상"
+    },
+    {
+      "file": "images/love.png",
+      "label": "사랑",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/life.png",
+      "label": "생명",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/eternal_life.png",
+      "label": "영생",
+      "note": "영원히 사는 것",
+      "category": "추상"
+    },
+    {
+      "file": "images/truth.png",
+      "label": "진리",
+      "note": "언제나 변하지 않는 참된 것",
+      "category": "추상"
+    },
+    {
+      "file": "images/perish.png",
+      "label": "멸망",
+      "note": "생명이 사라지는 것",
+      "category": "추상"
+    },
+    {
+      "file": "images/way.png",
+      "label": "길",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/door.png",
+      "label": "문",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/mountain.png",
+      "label": "산",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/light.png",
+      "label": "빛",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/strength.png",
+      "label": "힘",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/hope.png",
+      "label": "소망",
+      "note": "좋은 일을 기다리는 마음",
+      "category": "추상"
+    },
+    {
+      "file": "images/friend.png",
+      "label": "친구",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/family.png",
+      "label": "가족",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/new_creation.png",
+      "label": "새로운 피조물",
+      "note": "새롭게 다시 태어난 것",
+      "category": "추상"
+    },
+    {
+      "file": "images/joy.png",
+      "label": "기쁨",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/sorrow.png",
+      "label": "슬픔",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/pillar.png",
+      "label": "기둥",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/roof.png",
+      "label": "지붕",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/easter.png",
+      "label": "부활절",
+      "note": "예수님 살아나신 날",
+      "category": "추상"
+    },
+    {
+      "file": "images/christmas.png",
+      "label": "성탄절",
+      "note": "예수님 태어나신 날",
+      "category": "추상"
+    },
+    {
+      "file": "images/chuseok.png",
+      "label": "추석",
+      "note": null,
+      "category": "추상"
+    },
+    {
+      "file": "images/reward_star.png",
+      "label": "잘했어요",
+      "note": null,
+      "category": "보상"
+    },
+    {
+      "file": "images/reward_trophy.png",
+      "label": "최고예요",
+      "note": null,
+      "category": "보상"
+    },
+    {
+      "file": "images/reward_heart.png",
+      "label": "참 잘했어요",
+      "note": null,
+      "category": "보상"
+    },
+    {
+      "file": "images/reward_rainbow.png",
+      "label": "대단해요",
+      "note": null,
+      "category": "보상"
+    }
+  ]
+}

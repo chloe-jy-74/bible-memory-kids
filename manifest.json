@@ -1,0 +1,16 @@
+{
+  "name": "유치부 성구암송",
+  "short_name": "성구암송",
+  "description": "판교 사랑의교회 유치부 · 소리와 그림으로 익히는 월별 성구암송",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7EC",
+  "theme_color": "#FFF7EC",
+  "lang": "ko",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
