@@ -199,8 +199,14 @@ img { max-width: 100%; display: block; }
   min-height: var(--btn-min-height);
 }
 .month-tile:active { transform: translateY(2px); box-shadow: none; }
-/* 그림 원본이 512×624 (아래쪽 한글 라벨 띠 포함) */
-.month-tile img { width: 100%; aspect-ratio: 512 / 624; object-fit: contain; }
+/* 그림 원본은 512×624 이고 아래쪽에 한글 이름 띠가 있습니다.
+   월 선택 화면에서는 '몇 월'인지만 알면 되므로 위쪽 정사각형만 보여 이름 띠를 잘라냅니다. */
+.month-tile img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: top;
+}
 
 .month-num { font-size: 26px; font-weight: 800; color: var(--ink); }
 .month-num .unit { font-size: 18px; font-weight: 700; color: var(--ink-soft); }
@@ -243,13 +249,25 @@ img { max-width: 100%; display: block; }
 /* ── 구절 듣기 / 따라 읽기 공통 ──────────────── */
 .listen, .repeat { flex: 1; display: flex; flex-direction: column; align-items: center; }
 
-.verse-ref { font-size: 17px; color: var(--ink-soft); font-weight: 700; margin-bottom: 8px; }
+.verse-ref {
+  font-size: 17px;
+  color: var(--ink-soft);
+  font-weight: 700;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  padding: 3px 10px;
+  transition: color .15s, background-color .15s;
+}
+/* 구절을 다 읽고 출처를 읽어줄 때 */
+.verse-ref.is-active { color: var(--ink); background: var(--highlight); }
 
+/* 낭독 화면도 월 선택과 같게 — 동물 이름 띠를 잘라내고 그림만 보여줍니다 */
 .verse-image {
   width: 42vw;
-  max-width: 190px;
-  aspect-ratio: 512 / 624;
-  object-fit: contain;
+  max-width: 180px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: top;
   background: var(--card);
   border-radius: var(--radius);
   overflow: hidden;

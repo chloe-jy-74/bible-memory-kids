@@ -13,6 +13,7 @@ const DEFAULT_STATE = {
   micChoice: '',        // '' 아직 안 물어봄 | 'granted' 허용함 | 'skip' 마이크 없이 쓰기로 함
   voiceName: '',        // 부모가 고른 목소리 이름 (''이면 자동으로 부드러운 목소리 선택)
   speechRate: 0,        // 부모가 고른 말하기 속도 (0이면 config 기본값)
+  speechPitch: 0,       // 부모가 고른 목소리 톤 (0이면 config 기본값)
   collected: [],        // 도감에 모은 월 번호들
   listened: [],         // 구절 듣기를 끝까지 들은 월 번호들
   cleared: [],          // 월별 퀴즈를 완주한 월 번호들
@@ -100,6 +101,15 @@ export function getSpeechRate() {
 
 export function setSpeechRate(rate) {
   state.speechRate = rate || 0;
+  save();
+}
+
+export function getSpeechPitch() {
+  return state.speechPitch;   // 0이면 config 기본값을 씁니다
+}
+
+export function setSpeechPitch(pitch) {
+  state.speechPitch = pitch || 0;
   save();
 }
 

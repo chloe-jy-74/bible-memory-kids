@@ -12,7 +12,7 @@
  */
 
 import { CONFIG } from './config.js';
-import { getVoiceName, getSpeechRate } from './storage.js';
+import { getVoiceName, getSpeechRate, getSpeechPitch } from './storage.js';
 
 export const CANCELLED = 'cancelled';
 
@@ -175,7 +175,7 @@ function playTts(text) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = CONFIG.speech.lang;
     u.rate = currentRate();
-    u.pitch = CONFIG.speech.pitch;
+    u.pitch = currentPitch();
     u.volume = CONFIG.speech.volume;
     if (koVoice) u.voice = koVoice;
 
@@ -253,9 +253,13 @@ function playAudioFile(url, fallbackText) {
   });
 }
 
-/** 부모가 설정에서 고른 속도가 있으면 그것을, 없으면 기본값을 씁니다 */
+/** 부모가 설정에서 고른 값이 있으면 그것을, 없으면 기본값을 씁니다 */
 function currentRate() {
   return getSpeechRate() || CONFIG.speech.rate;
+}
+
+function currentPitch() {
+  return getSpeechPitch() || CONFIG.speech.pitch;
 }
 
 function estimateMs(text) {

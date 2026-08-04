@@ -7,10 +7,10 @@ export const CONFIG = {
   /* ── 음성 (TTS) ────────────────────────────────── */
   speech: {
     lang: 'ko-KR',
-    // 나긋나긋하게 들리도록: 조금 느리게 + 아주 살짝 높은 톤.
-    // (기획서 값은 0.85였고, 설정 화면에서 부모가 바꿀 수 있습니다)
-    rate: 0.80,
-    pitch: 1.05,
+    // 나긋나긋하게 들리도록: 조금 느리게 + 조금 낮은 톤.
+    // (기획서 값은 rate 0.85였고, 설정 화면에서 부모가 속도·톤을 바꿀 수 있습니다)
+    rate: 0.78,
+    pitch: 0.92,
     volume: 1.0,
 
     // 부모가 고르지 않았을 때 이 순서대로 부드러운 목소리를 먼저 찾습니다.
@@ -22,9 +22,15 @@ export const CONFIG = {
     ],
     // 설정 화면의 말하기 속도 선택지
     rateOptions: [
-      { key: 'slow', label: '천천히', rate: 0.70 },
-      { key: 'normal', label: '보통', rate: 0.80 },
-      { key: 'fast', label: '조금 빠르게', rate: 0.92 },
+      { key: 'slow', label: '천천히', rate: 0.68 },
+      { key: 'normal', label: '보통', rate: 0.78 },
+      { key: 'fast', label: '조금 빠르게', rate: 0.90 },
+    ],
+    // 설정 화면의 목소리 톤 선택지 (낮을수록 차분하고 나긋나긋합니다)
+    pitchOptions: [
+      { key: 'low', label: '낮게', pitch: 0.82 },
+      { key: 'normal', label: '보통', pitch: 0.92 },
+      { key: 'high', label: '높게', pitch: 1.05 },
     ],
     sampleText: '하나님이 세상을 이처럼 사랑하사',
     // 브라우저가 onend 이벤트를 안 주고 멈추는 경우를 대비한 안전장치.

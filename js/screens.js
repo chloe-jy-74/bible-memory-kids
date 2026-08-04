@@ -188,7 +188,8 @@ function ListenScreen({ month }) {
 
   const body = el('div', 'listen');
   body.appendChild(img(getMonthImage(month), 'verse-image'));
-  body.appendChild(el('div', 'verse-ref', verse.ref));
+  const refEl = el('div', 'verse-ref', verse.ref);
+  body.appendChild(refEl);
 
   const card = el('div', 'verse-card');
   const lineEls = verse.lines.map(text => {
@@ -233,12 +234,20 @@ function ListenScreen({ month }) {
       await speakSequence(verse.lines, { gapMs: CONFIG.timing.lineGapMs, onLine: highlight });
       lineEls.forEach(line => line.classList.remove('is-active'));
       card.classList.add('is-done');
+
+      // 구절을 다 읽은 뒤 출처를 붙여 읽습니다 (예: "요한복음 3장 16절")
+      await pause(CONFIG.timing.lineGapMs);
+      refEl.classList.add('is-active');
+      await speak(verse.refSpeech || verse.ref);
+      refEl.classList.remove('is-active');
+
       store.markListened(month);
       await pause(CONFIG.timing.replayGapMs);
       setPlaying(false);
     } catch (err) {
       ignoreCancel(err);
       lineEls.forEach(line => line.classList.remove('is-active'));
+      refEl.classList.remove('is-active');
       setPlaying(false);
     }
   }
@@ -787,6 +796,23 @@ function SettingsScreen() {
     return b;
   });
   holder.appendChild(rateSeg);
+
+  // 목소리 톤 (낮을수록 차분합니다)
+  holder.appendChild(el('label', 'field-label', '목소리 톤'));
+  const pitchSeg = el('div', 'segmented');
+  const nowPitch = store.getSpeechPitch() || CONFIG.speech.pitch;
+  const pitchButtons = CONFIG.speech.pitchOptions.map(opt => {
+    const b = el('button', 'seg-btn', opt.label);
+    b.classList.toggle('is-on', Math.abs(nowPitch - opt.pitch) < 0.001);
+    b.addEventListener('click', () => {
+      store.setSpeechPitch(opt.pitch);
+      pitchButtons.forEach((x, i) => x.classList.toggle('is-on', CONFIG.speech.pitchOptions[i].pitch === opt.pitch));
+      speak(CONFIG.speech.sampleText).catch(ignoreCancel);
+    });
+    pitchSeg.appendChild(b);
+    return b;
+  });
+  holder.appendChild(pitchSeg);
 
   const preview = el('button', 'wide-btn', '🔊 들어보기');
   preview.addEventListener('click', () => speak(CONFIG.speech.sampleText).catch(ignoreCancel));
