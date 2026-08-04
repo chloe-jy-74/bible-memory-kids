@@ -426,8 +426,9 @@ function RepeatScreen({ month }) {
     const allow = el('button', 'wide-btn', '🎤 마이크 켜기');
     allow.addEventListener('click', async () => {
       allow.disabled = true;
-      const ok = await ensureMic();          // 반드시 사용자가 누른 자리에서 요청해야 합니다
-      store.setMicChoice(ok ? '' : 'skip');  // 거부했으면 다음부터 묻지 않음
+      const ok = await ensureMic();   // 반드시 사용자가 누른 자리에서 요청해야 합니다
+      // 허용했든 거부했든 이 안내 카드는 기기당 한 번이면 충분합니다
+      store.setMicChoice(ok ? 'granted' : 'skip');
       gate.remove();
       run();
     });
@@ -452,11 +453,16 @@ function RepeatScreen({ month }) {
     const permission = await getMicPermission();
     if (!alive) return;
 
-    // 이미 허용한 기기는 묻지 않고 바로 시작합니다.
+    // 안내 카드는 기기당 한 번만 보여 줍니다. 그 뒤로는 곧장 시작합니다.
     // (여기서 ensureMic()을 기다리면 안 됩니다 — 응답이 없는 기기에서 화면이 멈춥니다.
     //  run() 안의 6초 안전장치가 알아서 자동 진행으로 넘겨 줍니다.)
-    if (permission === 'granted') return run();
-    if (permission === 'denied' || store.getMicChoice() === 'skip') return run();
+    //
+    // 아이폰 사파리는 권한 조회를 지원하지 않아 permission 이 'unknown' 으로 옵니다.
+    // 그래서 '한 번 허용했다'는 사실을 기기에 따로 적어 두고 카드를 건너뜁니다.
+    // (사파리가 다시 물어보는 건 브라우저 자체 창이며, 앱 안내 카드가 겹치지는 않습니다)
+    const answered = store.getMicChoice();
+    if (permission === 'granted' || permission === 'denied') return run();
+    if (answered === 'granted' || answered === 'skip') return run();
     showGate();
   }
 
@@ -819,9 +825,15 @@ function SettingsScreen() {
   });
   holder.appendChild(seg);
 
-  // 마이크 — '없이 하기'를 골랐던 경우에만 다시 물어볼 수 있게
+  // 마이크
+  holder.appendChild(el('label', 'field-label', '마이크 (따라 읽기)'));
+  const micState = {
+    granted: '허용함 — 아이 목소리를 듣고 칭찬해 줍니다',
+    skip: '사용 안 함 — 소절마다 3초씩 기다렸다 넘어갑니다',
+  }[store.getMicChoice()] || '아직 물어보지 않았어요';
+  holder.appendChild(el('p', 'field-hint', micState));
+
   if (store.getMicChoice() === 'skip') {
-    holder.appendChild(el('label', 'field-label', '마이크'));
     const again = el('button', 'wide-btn', '🎤 마이크 다시 사용하기');
     again.addEventListener('click', () => {
       store.setMicChoice('');
@@ -829,9 +841,12 @@ function SettingsScreen() {
       again.textContent = '다음에 따라 읽기를 열면 물어볼게요';
     });
     holder.appendChild(again);
-    holder.appendChild(el('p', 'field-hint',
-      '브라우저에서 마이크를 아예 차단해 두셨다면, 주소창 왼쪽 자물쇠 아이콘에서 허용으로 바꿔 주세요.'));
   }
+
+  holder.appendChild(el('p', 'field-hint',
+    '아이폰에서 열 때마다 마이크를 다시 물어본다면, 사파리 주소창의 "아A" → 웹사이트 설정 → '
+    + '마이크를 "허용"으로 바꾸면 다시 묻지 않습니다. '
+    + '안드로이드·PC 크롬은 한 번 허용하면 계속 기억합니다.'));
 
   // 초기화
   const reset = el('button', 'danger-btn', '진도 초기화');

@@ -10,7 +10,7 @@ const DEFAULT_STATE = {
   nameAsked: false,     // 첫 실행 때 이름을 물어봤는지
   currentMonth: null,   // 랜덤 퀴즈 범위 기준. null이면 오늘 날짜의 월
   repeatMode: 'basic',  // 따라 읽기 방식: 'basic'(따라 하기) | 'advanced'(이어 말하기)
-  micChoice: '',        // '' 아직 안 물어봄 | 'skip' 마이크 없이 쓰기로 함
+  micChoice: '',        // '' 아직 안 물어봄 | 'granted' 허용함 | 'skip' 마이크 없이 쓰기로 함
   voiceName: '',        // 부모가 고른 목소리 이름 (''이면 자동으로 부드러운 목소리 선택)
   speechRate: 0,        // 부모가 고른 말하기 속도 (0이면 config 기본값)
   collected: [],        // 도감에 모은 월 번호들
