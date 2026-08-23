@@ -105,17 +105,6 @@ img { max-width: 100%; display: block; }
 
 .topbar-right { margin-left: auto; }
 
-.status-chip {
-  font-size: 15px;
-  font-weight: 700;
-  color: #3E8F72;
-  background: #E4F7EF;
-  border-radius: 999px;
-  padding: 8px 14px;
-  white-space: nowrap;
-}
-.status-chip.is-auto { color: #8A6A22; background: #FFF0D6; }
-
 /* ── 메인 메뉴 ───────────────────────────────── */
 .menu-head { display: flex; align-items: center; justify-content: center; position: relative; }
 .gear-btn {
@@ -163,20 +152,8 @@ img { max-width: 100%; display: block; }
 .menu-btn:active { transform: translateY(2px); box-shadow: none; }
 .menu-btn .menu-icon { font-size: 42px; line-height: 1; }
 
-.menu-btn[data-mode="repeat"] { border-left-color: var(--accent-2); }
 .menu-btn[data-mode="quiz"]   { border-left-color: var(--accent-3); }
 .menu-btn[data-mode="random"] { border-left-color: var(--accent-4); }
-.menu-btn[data-mode="book"]   { border-left-color: var(--accent-5); }
-
-.count-tag {
-  margin-left: auto;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  background: var(--line);
-  border-radius: 999px;
-  padding: 6px 14px;
-}
 
 /* ── 월 선택 ─────────────────────────────────── */
 .month-grid {
@@ -226,7 +203,7 @@ img { max-width: 100%; display: block; }
   box-shadow: 0 2px 0 rgba(0, 0, 0, .1);
 }
 
-/* 따라 읽기 방식 선택 (부모용) */
+/* 설정 화면의 속도·톤 고르기 */
 .segmented {
   display: flex;
   gap: 8px;
@@ -244,19 +221,24 @@ img { max-width: 100%; display: block; }
   color: var(--ink-soft);
 }
 .seg-btn.is-on { background: var(--card); color: var(--ink); box-shadow: 0 2px 0 rgba(0, 0, 0, .06); }
-.seg-hint { font-size: 15px; color: var(--ink-soft); margin: 0 4px 14px; line-height: 1.5; }
 
-/* ── 구절 듣기 / 따라 읽기 공통 ──────────────── */
-.listen, .repeat { flex: 1; display: flex; flex-direction: column; align-items: center; }
+/* ── 구절 듣기 ───────────────────────────────── */
+.listen { flex: 1; display: flex; flex-direction: column; align-items: center; }
 
 .verse-ref {
-  font-size: 17px;
+  font-size: 42.5px;          /* 기본 17px 의 2.5배 */
   color: var(--ink-soft);
   font-weight: 700;
-  margin-bottom: 8px;
-  border-radius: 10px;
-  padding: 3px 10px;
-  transition: color .15s, background-color .15s;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  padding: 4px 12px;
+  /* 이 크기에서는 '디모데전서 3장 15절 하반절' 같은 출처가 한 줄에 안 들어갑니다.
+     낱말 단위로 접고, 가운데 정렬해 두 줄이 되어도 모양이 흐트러지지 않게 합니다. */
+  max-width: 100%;
+  text-align: center;
+  word-break: keep-all;
+  line-height: 1.2;
+  transition: color .12s;   /* 배경(노란 칸)은 즉시 — 위 .verse-line 과 같은 이유 */
 }
 /* 구절을 다 읽고 출처를 읽어줄 때 */
 .verse-ref.is-active { color: var(--ink); background: var(--highlight); }
@@ -295,11 +277,13 @@ img { max-width: 100%; display: block; }
   border-radius: 14px;
   padding: 4px 8px;
   color: #B7AFA4;           /* 아직 안 읽은 소절은 흐리게 */
-  transition: color .15s, background-color .15s;
+  /* 노란 칸은 곧바로 켜져야 합니다. 0.15초라도 서서히 칠해지면
+     타이밍이 맞아도 소리보다 늦게 옮겨지는 것처럼 보입니다.
+     글자색만 부드럽게 바꾸고 배경은 즉시 칠합니다. */
+  transition: color .12s;
 }
 .verse-line.is-read { color: var(--ink); }
 .verse-line.is-active { color: var(--ink); background: var(--highlight); }
-.verse-line.is-turn { color: var(--ink); background: var(--turn); }
 .verse-card.is-done .verse-line { color: var(--ink); }
 
 .bottom-controls {
@@ -328,94 +312,11 @@ img { max-width: 100%; display: block; }
 .play-btn .icon { font-size: 30px; }
 .play-btn.is-playing { background: var(--ink-soft); box-shadow: 0 4px 0 #6E675F; }
 
-/* ── 따라 읽기: 마이크 차례 표시 ─────────────── */
-.mic-stage {
-  margin-top: auto;
-  padding-top: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.mic-circle {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: var(--line);
-  display: grid;
-  place-items: center;
-  transition: background-color .2s;
-}
-.mic-circle .mic-icon { font-size: 52px; opacity: .35; position: relative; z-index: 1; }
-.mic-circle.is-on { background: var(--turn); }
-.mic-circle.is-on .mic-icon { opacity: 1; animation: bob 1.2s ease-in-out infinite; }
-
 /* 목소리 크기에 따라 커지는 링 */
-.mic-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: rgba(63, 191, 127, .25);
-  transform: scale(1);
-  transition: transform .1s linear;
-}
-.mic-circle:not(.is-on) .mic-ring { opacity: 0; }
 
 @keyframes bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
-}
-
-.stage-text {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  min-height: 28px;
-}
-
-.round-tag {
-  align-self: flex-end;
-  margin-top: 12px;
-  font-size: 15px;
-  color: var(--ink-soft);
-}
-
-/* ── 마이크 권한 안내 (부모용, 한 번만) ──────── */
-.gate {
-  position: absolute;
-  inset: 0;
-  background: var(--bg);
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  z-index: 20;
-}
-.gate-card {
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 26px 20px 20px;
-  text-align: center;
-  width: 100%;
-  max-width: 420px;
-}
-.gate-icon { font-size: 56px; margin-bottom: 8px; }
-.gate-title { font-size: 26px; font-weight: 800; margin-bottom: 10px; }
-.gate-text {
-  font-size: 17px;
-  line-height: 1.6;
-  color: var(--ink-soft);
-  margin: 0 0 20px;
-  word-break: keep-all;
-}
-.gate-note {
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-  margin: 16px 0 0;
-  word-break: keep-all;
 }
 
 /* ── 퀴즈 ────────────────────────────────────── */
@@ -472,13 +373,6 @@ img { max-width: 100%; display: block; }
 
 .choice-word.is-long { font-size: 23px; }
 
-.choice.has-image { padding: 6px 58px 6px 6px; }
-.choice-img {
-  height: 132px;
-  aspect-ratio: 512 / 624;
-  object-fit: contain;
-}
-
 .choice-icon {
   position: absolute;
   right: 16px;
@@ -518,7 +412,7 @@ img { max-width: 100%; display: block; }
   to { transform: scale(1); opacity: 1; }
 }
 
-/* ── 연출 판 (보상 / 도감 수집) ──────────────── */
+/* ── 연출 판 (한 세트 완주) ──────────────────── */
 .overlay {
   position: fixed;
   inset: 0;
@@ -532,6 +426,8 @@ img { max-width: 100%; display: block; }
 }
 .overlay.is-on { opacity: 1; }
 
+.done-text { font-size: 30px; font-weight: 800; animation: pop .3s; }
+
 .reward-card {
   display: flex;
   flex-direction: column;
@@ -539,62 +435,6 @@ img { max-width: 100%; display: block; }
   gap: 10px;
   animation: pop .3s;
 }
-.reward-sticker { width: 58vw; max-width: 260px; }
-.reward-animal { width: 34vw; max-width: 150px; }
-.reward-text { font-size: 26px; font-weight: 800; }
-
-.collect-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 420px;
-}
-.collect-title { font-size: 26px; font-weight: 800; text-align: center; word-break: keep-all; }
-.collect-animal { width: 50vw; max-width: 230px; animation: pop .4s; }
-
-.book-mini { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; width: 100%; }
-.mini-slot {
-  background: var(--card);
-  border-radius: 10px;
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 3px solid transparent;
-}
-.mini-slot img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.mini-lock { color: #D6CEC2; font-size: 20px; font-weight: 800; }
-.mini-slot.is-new { border-color: var(--green); animation: pop .5s .3s backwards; }
-
-/* ── 동물 도감 ───────────────────────────────── */
-.book-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--gap);
-}
-.book-slot {
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  padding: 0 0 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 150px;
-}
-.book-slot img { width: 100%; aspect-ratio: 512 / 624; object-fit: contain; }
-.book-slot.is-empty { background: #F4EFE6; box-shadow: none; justify-content: center; gap: 10px; }
-.book-slot.is-empty .month-num { color: var(--ink-soft); }
-.slot-lock {
-  font-size: 46px;
-  font-weight: 800;
-  color: #D6CEC2;
-  padding: 24px 0 8px;
-}
-.book-slot.is-new { outline: 4px solid var(--green); animation: pop .5s; }
 
 /* ── 이름 입력 / 설정 ────────────────────────── */
 .pad-screen { gap: 4px; }

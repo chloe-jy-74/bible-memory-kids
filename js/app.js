@@ -3,11 +3,10 @@
  * 화면 내용은 js/screens.js, 화면 전환은 js/router.js 에 있습니다.
  */
 
-import { loadData } from './data.js';
+import { findClip, loadData } from './data.js';
 import { SCREENS } from './screens.js';
 import { setScreens, start } from './router.js';
-import { primeSpeech } from './speech.js';
-import { isNameAsked } from './storage.js';
+import { primeSpeech, setAudioResolver } from './speech.js';
 import { el } from './ui.js';
 
 const screenEl = document.getElementById('screen');
@@ -29,8 +28,12 @@ async function boot() {
     return;
   }
 
+  // 문항·선택지는 구절 음원과 같은 목소리(ElevenLabs Faye)로 미리 녹음해 두었습니다.
+  // 목록에 없는 문장만 브라우저 TTS 로 읽습니다.
+  setAudioResolver(findClip);
+
   setScreens(SCREENS, screenEl);
-  start(isNameAsked() ? 'menu' : 'name', {});
+  start('menu', {});
 }
 
 boot();

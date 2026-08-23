@@ -6,15 +6,11 @@
 import { CONFIG } from './config.js';
 
 const DEFAULT_STATE = {
-  childName: '',        // 칭찬 음성에 쓰는 아이 이름 (없으면 이름 없는 문장만 사용)
-  nameAsked: false,     // 첫 실행 때 이름을 물어봤는지
   currentMonth: null,   // 랜덤 퀴즈 범위 기준. null이면 오늘 날짜의 월
-  repeatMode: 'basic',  // 따라 읽기 방식: 'basic'(따라 하기) | 'advanced'(이어 말하기)
-  micChoice: '',        // '' 아직 안 물어봄 | 'granted' 허용함 | 'skip' 마이크 없이 쓰기로 함
   voiceName: '',        // 부모가 고른 목소리 이름 (''이면 자동으로 부드러운 목소리 선택)
   speechRate: 0,        // 부모가 고른 말하기 속도 (0이면 config 기본값)
   speechPitch: 0,       // 부모가 고른 목소리 톤 (0이면 config 기본값)
-  collected: [],        // 도감에 모은 월 번호들
+  highlightLead: 0,     // 노란 칸을 소리보다 앞당기는 정도, ms (0이면 config 기본값)
   listened: [],         // 구절 듣기를 끝까지 들은 월 번호들
   cleared: [],          // 월별 퀴즈를 완주한 월 번호들
 };
@@ -43,24 +39,9 @@ export function getState() {
 
 /* ── 아이 이름 ─────────────────────────────────── */
 
-export function getChildName() {
-  return state.childName;
-}
 
-export function setChildName(name) {
-  state.childName = (name || '').trim().slice(0, 10);
-  state.nameAsked = true;
-  save();
-}
 
-export function isNameAsked() {
-  return state.nameAsked;
-}
 
-export function markNameAsked() {
-  state.nameAsked = true;
-  save();
-}
 
 /* ── 현재 월 (랜덤 퀴즈 범위) ──────────────────── */
 
@@ -75,14 +56,7 @@ export function setCurrentMonth(month) {
 
 /* ── 따라 읽기 방식 ────────────────────────────── */
 
-export function getRepeatMode() {
-  return state.repeatMode;
-}
 
-export function setRepeatMode(mode) {
-  state.repeatMode = mode === 'advanced' ? 'advanced' : 'basic';
-  save();
-}
 
 /* ── 목소리 ────────────────────────────────────── */
 
@@ -92,6 +66,15 @@ export function getVoiceName() {
 
 export function setVoiceName(name) {
   state.voiceName = name || '';
+  save();
+}
+
+export function getHighlightLead() {
+  return state.highlightLead;   // 0이면 config 기본값을 씁니다
+}
+
+export function setHighlightLead(ms) {
+  state.highlightLead = ms || 0;
   save();
 }
 
@@ -115,14 +98,7 @@ export function setSpeechPitch(pitch) {
 
 /* ── 마이크 ────────────────────────────────────── */
 
-export function getMicChoice() {
-  return state.micChoice;
-}
 
-export function setMicChoice(choice) {
-  state.micChoice = choice;   // 'skip' 이면 다음부터 묻지 않고 자동 진행으로 시작
-  save();
-}
 
 /* ── 진도 ──────────────────────────────────────── */
 
@@ -142,21 +118,8 @@ export function hasCleared(month) {
   return state.cleared.includes(month);
 }
 
-/** 도감에 새로 모았으면 true (연출용), 이미 있었으면 false */
-export function collectAnimal(month) {
-  if (state.collected.includes(month)) return false;
-  state.collected.push(month);
-  save();
-  return true;
-}
 
-export function isCollected(month) {
-  return state.collected.includes(month);
-}
 
-export function getCollected() {
-  return [...state.collected];
-}
 
 export function resetAll() {
   state = { ...DEFAULT_STATE, nameAsked: true, childName: state.childName };

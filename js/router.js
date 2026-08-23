@@ -6,7 +6,6 @@
  */
 
 import { stopSpeaking } from './speech.js';
-import { releaseMic } from './mic.js';
 import { clearOverlays } from './ui.js';
 
 let screens = {};
@@ -22,7 +21,6 @@ export function setScreens(map, mountEl) {
 function render() {
   if (leaveCurrent) { leaveCurrent(); leaveCurrent = null; }
   stopSpeaking();
-  releaseMic();
   clearOverlays();
   mount.innerHTML = '';
 

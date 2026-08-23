@@ -6,25 +6,37 @@
 const VERSES_URL = 'data/verses.json';
 const QUESTIONS_URL = 'data/questions.json';
 const IMAGES_URL = 'assets/images.json';
+const AUDIO_INDEX_URL = 'data/audio-index.json';
 
 let verses = null;         // month(1~12) → 구절 객체
-let imagesByLabel = null;  // 한글 라벨 → 그림 정보
 let imagesByFile = null;   // 파일 경로 → 그림 정보
 let monthly = [];          // 월별 문항
-let general = [];          // 종합 문항 (랜덤 퀴즈 전용)
+let general = [];          // 종합 문항
+let clipByText = null;     // 읽을 문장 → 녹음 파일
 
 export async function loadData() {
-  const [versesJson, questionsJson, imagesJson] = await Promise.all([
+  const [versesJson, questionsJson, imagesJson, audioJson] = await Promise.all([
     fetchJson(VERSES_URL),
     fetchJson(QUESTIONS_URL),
     fetchJson(IMAGES_URL),
+    fetchJson(AUDIO_INDEX_URL),
   ]);
 
   verses = new Map(versesJson.months.map(v => [v.month, v]));
-  imagesByLabel = new Map(imagesJson.images.map(i => [i.label, i]));
   imagesByFile = new Map(imagesJson.images.map(i => [i.file, i]));
   monthly = questionsJson.monthly;
   general = questionsJson.general;
+  clipByText = new Map(Object.entries(audioJson.clips)
+    .map(([text, file]) => [text, `assets/${audioJson.dir}${file}`]));
+}
+
+/**
+ * 문항·선택지 녹음 파일 찾기 (구절 음원과 같은 목소리로 미리 만들어 둔 것).
+ * speech.js 의 setAudioResolver 가 speak() 할 때마다 이걸 부릅니다.
+ * 없는 문장이면 null → 브라우저 TTS 로 넘어갑니다.
+ */
+export function findClip(text) {
+  return clipByText ? clipByText.get(text) || null : null;
 }
 
 async function fetchJson(url) {
@@ -43,16 +55,17 @@ export function getVerse(month) {
   return verses.get(month);
 }
 
-/** 그 달의 도감 동물 그림 경로 */
+/** 그 달의 그림 경로 */
 export function getMonthImage(month) {
   return imageUrl(getVerse(month).animal);
 }
 
-/** 그 달의 도감 동물 이름 (음성으로 읽어줄 때만 사용 — 화면에는 그림에 인쇄된 것으로 충분) */
-export function getMonthAnimalName(month) {
-  const found = imagesByFile.get(getVerse(month).animal);
-  return found ? found.label : '';
+/** 그 달 구절의 녹음 파일 경로 */
+export function getVerseAudio(month) {
+  const v = getVerse(month);
+  return v && v.audio ? `assets/${v.audio}` : null;
 }
+
 
 /* ── 문항 ──────────────────────────────────────── */
 
@@ -70,22 +83,7 @@ export function getGeneralQuestions() {
 
 /* ── 그림 ──────────────────────────────────────── */
 
-/**
- * 한글 라벨로 그림 찾기. 대응 그림이 없는 선택지(성경 출처·월 이름 등)는 null.
- * @returns {{src: string, label: string, note: string|null}|null}
- */
-export function findImage(label) {
-  const found = imagesByLabel.get(label);
-  if (!found) return null;
-  return { src: imageUrl(found.file), label: found.label, note: found.note };
-}
 
-/** 보상 스티커 (별·트로피·하트·무지개) */
-export function getRewardStickers() {
-  return [...imagesByLabel.values()]
-    .filter(i => i.category === '보상')
-    .map(i => ({ src: imageUrl(i.file), label: i.label }));
-}
 
 function imageUrl(file) {
   return `assets/${file}`;
