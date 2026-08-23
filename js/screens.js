@@ -12,7 +12,7 @@ import { CONFIG } from './config.js';
 import { getAllVerses, getVerse, getVerseAudio, getMonthImage } from './data.js';
 import { buildMonthSet, buildRandomSet, pickOne } from './questions.js';
 import {
-  speak, pause, stopSpeaking, speakSequence, ignoreCancel, CANCELLED,
+  speak, pause, stopSpeaking, speakSequence, ignoreCancel,
   isSpeechSupported, hasKoreanVoice, getKoreanVoices, refreshVoice,
 } from './speech.js';
 import * as store from './storage.js';
@@ -138,14 +138,19 @@ function ListenScreen({ month }) {
   body.appendChild(controls);
   holder.appendChild(body);
 
-  let playing = false;
-  let alive = true;
+  let playing = false;      // 소리가 나고 있는 중인가
+  let alive = true;         // 화면이 아직 떠 있는가
+  let audio = null;         // 재생 중이거나 '일시정지된' 음원. 멈춰도 버리지 않습니다.
+  let ticker = 0;           // 소절 강조를 옮기는 타이머
+  let cancelCurrent = null; // 지금 재생을 끊는 방법 (일시정지 / 화면 이탈)
+
+  const PAUSED = 'paused';
 
   function setPlaying(on) {
     playing = on;
     playBtn.classList.toggle('is-playing', on);
-    playIcon.textContent = on ? '■' : '▶';
-    playText.textContent = on ? '멈춤' : '듣기';
+    playIcon.textContent = on ? '⏸' : '▶';
+    playText.textContent = on ? '일시정지' : '듣기';
   }
 
   function highlight(index) {
@@ -162,35 +167,24 @@ function ListenScreen({ month }) {
   }
 
   /**
-   * 녹음 파일 한 번 재생 + 소절 하이라이트.
+   * 지금 들고 있는 음원을 (처음이든 멈춘 자리든) 재생하고, 끝까지 가면 resolve.
    *
    * 음원은 "○월 말씀 → 본문 → 출처"가 한 파일로 이어져 있습니다.
    * verses.json 의 cues 가 소절마다 [시작, 끝] 을 음원 길이 대비 비율로 담고 있어서,
    * 재생 위치(currentTime)를 보고 지금 읽는 소절에 불을 켭니다.
    * cues 가 없으면 소절 수로 균등 분할합니다.
    */
-  function playRecording(url) {
+  function playCurrent() {
     return new Promise((resolve, reject) => {
-      const audio = new Audio(url);
-      let ticker = 0;
-
-      const stop = () => {
-        clearInterval(ticker);
-        audio.onended = audio.onerror = null;
-        try { audio.pause(); } catch (_) { /* 무시 */ }
-      };
-      const cancel = () => { stop(); reject(CANCELLED); };
-      const done = () => { stop(); release(cancel); resolve(); };
-
+      const a = audio;
       const cues = verse.cues;
       // 부모가 설정 화면에서 맞춘 값 (없으면 기본값)
       const lead = (store.getHighlightLead() || CONFIG.timing.highlightLeadMs) / 1000;
+
       const follow = () => {
-        const total = audio.duration || verse.audioSeconds || 0;
+        const total = a.duration || verse.audioSeconds || 0;
         if (!total) return;
-        // 타이머가 80ms 마다 도는 만큼 늘 조금 늦게 옮겨집니다.
-        // 살짝 앞당겨 봐서, 소리보다 뒤따라오지 않고 딱 맞아떨어지게 합니다.
-        const at = (audio.currentTime + lead) / total;
+        const at = (a.currentTime + lead) / total;
 
         if (!cues) {
           highlight(Math.min(lineEls.length - 1, Math.floor(at * lineEls.length)));
@@ -204,19 +198,30 @@ function ListenScreen({ month }) {
         highlight(now);
       };
 
-      audio.onended = done;
-      audio.onerror = cancel;   // 파일이 없으면 호출한 쪽에서 TTS 로 넘어갑니다
-      takeOverListen(cancel);
-      audio.play().then(() => {
-        // 60fps 가 필요 없는 일이라 타이머로 따라갑니다.
-        // requestAnimationFrame 과 달리 탭이 뒤로 가도 멈추지 않아 소리와 어긋나지 않습니다.
+      const detach = () => {
+        clearInterval(ticker);
+        a.onended = null;
+        a.onerror = null;
+      };
+      // 일시정지: 소리만 멈추고 음원은 그대로 둡니다. 다시 누르면 이 자리에서 이어집니다.
+      const halt = () => {
+        detach();
+        try { a.pause(); } catch (_) { /* 무시 */ }
+        reject(PAUSED);
+      };
+      const done = () => { detach(); release(halt); resolve(); };
+
+      a.onended = done;
+      a.onerror = () => { detach(); release(halt); reject(new Error('음원을 재생하지 못했습니다')); };
+      takeOverListen(halt);
+      a.play().then(() => {
         ticker = setInterval(follow, CONFIG.timing.highlightTickMs);
         follow();
-      }).catch(cancel);
+      }).catch(() => { detach(); release(halt); reject(new Error('음원을 재생하지 못했습니다')); });
     });
   }
 
-  /** 녹음이 없을 때만 쓰는 예비 낭독 (브라우저 TTS) */
+  /** 녹음이 없을 때만 쓰는 예비 낭독 (브라우저 TTS — 이어 듣기는 안 되고 소절부터 다시 읽습니다) */
   async function speakFallback() {
     await speakSequence(verse.lines, {
       gapMs: CONFIG.timing.lineGapMs,
@@ -226,37 +231,51 @@ function ListenScreen({ month }) {
     await speak(verse.refSpeech || verse.ref);
   }
 
-  // 멈춤 버튼과 화면 이탈이 재생 중인 음원을 끊을 수 있게 하는 고리
-  let cancelCurrent = null;
   function takeOverListen(fn) { cancelCurrent = fn; }
   function release(fn) { if (cancelCurrent === fn) cancelCurrent = null; }
-  function stopAll() {
+
+  /** 일시정지 — 멈춘 자리를 기억해 둡니다 */
+  function pausePlayback() {
     if (cancelCurrent) { const fn = cancelCurrent; cancelCurrent = null; fn(); }
-    stopSpeaking();
+    stopSpeaking();          // 예비 낭독이나 반복 대기 중이었다면 그것도 멈춤
+    setPlaying(false);
   }
 
-  /** 멈출 때까지 계속 반복해서 들려줍니다. */
+  /** 화면을 벗어날 때 — 기억해 둔 자리까지 버립니다 */
+  function stopAll() {
+    pausePlayback();
+    if (audio) { try { audio.pause(); } catch (_) { /* 무시 */ } }
+    audio = null;
+  }
+
+  /** 멈출 때까지 계속 반복해서 들려줍니다. 일시정지했다면 그 자리에서 이어집니다. */
   async function play() {
     if (playing) return;
     setPlaying(true);
     const url = getVerseAudio(month);
 
     try {
-      while (alive) {
-        clearHighlight();
-        card.classList.remove('is-done');
-
+      while (alive && playing) {
         if (url) {
+          if (!audio) {                    // 새로 시작하는 한 바퀴
+            audio = new Audio(url);
+            clearHighlight();
+            card.classList.remove('is-done');
+          }
           try {
-            await playRecording(url);
+            await playCurrent();
           } catch (err) {
-            if (err === CANCELLED) throw err;
-            await speakFallback();      // 녹음 재생 실패 → 예비 낭독
+            if (err === PAUSED) return;    // 자리를 기억한 채 멈춤
+            audio = null;
+            await speakFallback();         // 녹음 재생 실패 → 예비 낭독
           }
         } else {
+          clearHighlight();
+          card.classList.remove('is-done');
           await speakFallback();
         }
 
+        audio = null;                      // 한 바퀴 끝 — 다음 바퀴는 처음부터
         clearHighlight();
         card.classList.add('is-done');
         store.markListened(month);
@@ -265,13 +284,12 @@ function ListenScreen({ month }) {
     } catch (err) {
       ignoreCancel(err);
     } finally {
-      clearHighlight();
-      setPlaying(false);
+      if (playing) setPlaying(false);
     }
   }
 
   playBtn.addEventListener('click', () => {
-    if (playing) stopAll();   // play() 의 finally 가 상태를 되돌립니다
+    if (playing) pausePlayback();
     else play();
   });
 
