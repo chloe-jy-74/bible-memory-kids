@@ -71,8 +71,7 @@ export const CONFIG = {
   /* ── 퀴즈 규칙 ─────────────────────────────────── */
   quiz: {
     choiceCount: 3,
-    randomSetSize: 10,             // 랜덤 퀴즈 한 세트 문항 수
-    randomCurrentMonthRatio: 0.5,  // 그중 이번 달 문제 비율
+    randomSetSize: 10,   // 랜덤 퀴즈 한 세트 문항 수 (월별 문항 51개 중에서 뽑음)
   },
 
   /* ── 음성 문구 ─────────────────────────────────── */

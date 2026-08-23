@@ -534,19 +534,6 @@ function SettingsScreen() {
   holder.appendChild(preview);
 
   // 현재 월 (랜덤 퀴즈 범위)
-  holder.appendChild(el('label', 'field-label', '지금 배우는 달 (랜덤 퀴즈 범위)'));
-  const select = el('select', 'text-input');
-  for (let m = 1; m <= 12; m++) {
-    const opt = el('option', null, `${m}월`);
-    opt.value = String(m);
-    if (m === store.getCurrentMonth()) opt.selected = true;
-    select.appendChild(opt);
-  }
-  select.addEventListener('change', () => store.setCurrentMonth(Number(select.value)));
-  holder.appendChild(select);
-  holder.appendChild(el('p', 'field-hint',
-    '랜덤 퀴즈는 이 달까지 배운 내용에서만 나옵니다.'));
-
   // 초기화
   const reset = el('button', 'danger-btn', '진도 초기화');
   let confirming = false;

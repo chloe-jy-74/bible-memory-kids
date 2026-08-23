@@ -11,7 +11,6 @@ const AUDIO_INDEX_URL = 'data/audio-index.json';
 let verses = null;         // month(1~12) → 구절 객체
 let imagesByFile = null;   // 파일 경로 → 그림 정보
 let monthly = [];          // 월별 문항
-let general = [];          // 종합 문항
 let clipByText = null;     // 읽을 문장 → 녹음 파일
 
 export async function loadData() {
@@ -25,7 +24,6 @@ export async function loadData() {
   verses = new Map(versesJson.months.map(v => [v.month, v]));
   imagesByFile = new Map(imagesJson.images.map(i => [i.file, i]));
   monthly = questionsJson.monthly;
-  general = questionsJson.general;
   clipByText = new Map(Object.entries(audioJson.clips)
     .map(([text, file]) => [text, `assets/${audioJson.dir}${file}`]));
 }
@@ -77,9 +75,6 @@ export function getAllMonthlyQuestions() {
   return monthly;
 }
 
-export function getGeneralQuestions() {
-  return general;
-}
 
 /* ── 그림 ──────────────────────────────────────── */
 

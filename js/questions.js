@@ -7,10 +7,7 @@
  */
 
 import { CONFIG } from './config.js';
-import {
-  getMonthlyQuestions, getAllMonthlyQuestions, getGeneralQuestions,
-} from './data.js';
-import { getCurrentMonth } from './storage.js';
+import { getMonthlyQuestions, getAllMonthlyQuestions } from './data.js';
 
 /** 문항 하나를 화면용으로 가공 */
 export function prepareQuestion(q) {
@@ -18,7 +15,7 @@ export function prepareQuestion(q) {
 
   return {
     id: q.id,
-    month: q.month || q.about || null,   // 보상 그림에 쓸 달
+    month: q.month,
     display: q.display,
     speech: q.speech || q.display,
     choices: order.map(i => ({ word: q.choices[i] })),
@@ -32,32 +29,14 @@ export function buildMonthSet(month) {
 }
 
 /**
- * 랜덤 퀴즈 한 세트 (10문제).
- * 이번 달 50% + 이전에 배운 달 50%. 아직 안 배운 달은 제외합니다.
+ * 랜덤 퀴즈 한 세트.
+ * 1~12월 월별 문항 전체를 문제은행으로 삼아, 들어올 때마다 새로 섞어 뽑습니다.
+ * 달을 가리지 않으므로 아직 안 배운 달의 문제도 나옵니다.
  */
 export function buildRandomSet() {
-  const current = getCurrentMonth();
-  const size = CONFIG.quiz.randomSetSize;
-  const wantCurrent = Math.round(size * CONFIG.quiz.randomCurrentMonthRatio);
-
-  const currentPool = shuffle(getMonthlyQuestions(current));
-  const earlierPool = shuffle([
-    ...getAllMonthlyQuestions().filter(q => q.month < current),
-    ...getGeneralQuestions().filter(g => g.about <= current),
-  ]);
-
-  const picked = [
-    ...currentPool.slice(0, wantCurrent),
-    ...earlierPool.slice(0, size - wantCurrent),
-  ];
-
-  // 한쪽이 모자라면 (예: 1월이라 이전 달이 없음) 남은 문제로 채웁니다.
-  if (picked.length < size) {
-    const rest = [...currentPool, ...earlierPool].filter(q => !picked.includes(q));
-    picked.push(...rest.slice(0, size - picked.length));
-  }
-
-  return shuffle(picked).map(prepareQuestion);
+  return shuffle(getAllMonthlyQuestions())
+    .slice(0, CONFIG.quiz.randomSetSize)
+    .map(prepareQuestion);
 }
 
 

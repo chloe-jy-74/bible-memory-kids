@@ -24,8 +24,8 @@ python3 -m http.server 8000
 메인 메뉴
 ├── 📖 구절 듣기   1~12월 (안내 말 없이 조용히) → 녹음 낭독, 멈출 때까지 반복
 ├── ❓ 월별 퀴즈   1~12월 → 글자 3지선다
-├── 🎲 랜덤 퀴즈   10문제 (이번 달 50% + 이전에 배운 달 50%)
-└── ⚙️ 설정        읽어주는 목소리 · 속도 · 톤 · 지금 배우는 달 · 진도 초기화
+├── 🎲 랜덤 퀴즈   월별 문항 51개 전체에서 10문제를 매번 새로 섞어 뽑음
+└── ⚙️ 설정        읽어주는 목소리 · 속도 · 톤 · 노란 칸 타이밍 · 진도 초기화
 ```
 
 ## ★ 목소리 — 모든 말이 미리 녹음된 파일입니다
@@ -37,7 +37,7 @@ python3 -m http.server 8000
 | | 개수 | 위치 |
 |---|---|---|
 | 구절 낭독 | 12개 | `assets/audio/01.mp3` ~ `12.mp3` |
-| 문항·선택지·칭찬·안내 | 243개 | `assets/audio/quiz/` |
+| 문항·선택지·칭찬·안내 | 191개 | `assets/audio/quiz/` |
 
 동작 방식은 접점이 딱 한 군데입니다 — `js/app.js`의 `setAudioResolver(findClip)`.
 `speak('지혜')`가 불리면 [data/audio-index.json](data/audio-index.json)에서 그 **문장 그대로** 찾아
@@ -114,7 +114,7 @@ js/router.js         화면 전환 (뒤로가기·안드로이드 백버튼)
 js/screens.js        모든 화면
 js/app.js            시작점
 data/verses.json     12개 구절 + 끊어 읽기 소절 + 음원 경로·구간
-data/questions.json  월별 51문항 + 종합 17문항
+data/questions.json  월별 51문항 (랜덤 퀴즈도 여기서 뽑습니다)
 data/audio-index.json 문장 → 음원 파일
 assets/audio/        구절 12개 + 문항·선택지 243개
 assets/images/       월 그림 12장
@@ -126,7 +126,7 @@ assets/images/       월 그림 12장
 |---|---|
 | 반복 간격, 정답 후 대기 등 모든 타이밍 | `js/config.js` → `timing` |
 | 정답 칭찬 / 오답 안내 문구 | `js/config.js` → `correctVoice`, `wrongVoice` (바꾸면 음원도 새로 뽑아야 함) |
-| 랜덤 퀴즈 문항 수, 이번 달 비율 | `js/config.js` → `quiz` |
+| 랜덤 퀴즈 한 세트 문항 수 (기본 10) | `js/config.js` → `quiz.randomSetSize` |
 | 버튼 높이·글자 크기·색 | `css/style.css` 맨 위 `:root` |
 | 구절 내용, 끊어 읽기 위치 | `data/verses.json` |
 | 문제·선택지 | `data/questions.json` |
@@ -147,6 +147,8 @@ assets/images/       월 그림 12장
 ```
 
 - `answer`는 **항상 0** (정답을 맨 앞에). 화면에서는 매번 자동으로 섞입니다.
+- **월별 퀴즈와 랜덤 퀴즈는 같은 문항을 씁니다.** 여기에 문항을 넣으면 양쪽에 다 나옵니다.
+  (별도의 종합 문제은행은 없습니다 — 예전 `general` 17문항은 뺐습니다.)
 - `speech`를 넣으면 화면 글자 대신 그걸 읽습니다 (따옴표·기호가 든 문항에 씁니다).
 - 선택지는 **글자만** 나옵니다. 문항도 선택지도 눌러서 소리로 들을 수 있으므로
   글을 모르는 아이도 풀 수 있습니다.

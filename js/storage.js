@@ -6,7 +6,6 @@
 import { CONFIG } from './config.js';
 
 const DEFAULT_STATE = {
-  currentMonth: null,   // 랜덤 퀴즈 범위 기준. null이면 오늘 날짜의 월
   voiceName: '',        // 부모가 고른 목소리 이름 (''이면 자동으로 부드러운 목소리 선택)
   speechRate: 0,        // 부모가 고른 말하기 속도 (0이면 config 기본값)
   speechPitch: 0,       // 부모가 고른 목소리 톤 (0이면 config 기본값)
@@ -45,14 +44,7 @@ export function getState() {
 
 /* ── 현재 월 (랜덤 퀴즈 범위) ──────────────────── */
 
-export function getCurrentMonth() {
-  return state.currentMonth || (new Date().getMonth() + 1);
-}
 
-export function setCurrentMonth(month) {
-  state.currentMonth = month;
-  save();
-}
 
 /* ── 따라 읽기 방식 ────────────────────────────── */
 
