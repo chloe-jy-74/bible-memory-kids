@@ -30,24 +30,26 @@ const MENU_ITEMS = [
 ];
 
 function MenuScreen() {
-  const holder = el('div');
+  const holder = el('div', 'home');
 
-  const head = el('div', 'menu-head');
-  head.appendChild(el('h1', 'app-title', '유치부 성구암송'));
+  // 설정은 어른만 쓰는 것이라 구석에 작게
   const gear = el('button', 'gear-btn', '⚙️');
   gear.setAttribute('aria-label', '설정');
   gear.addEventListener('click', () => navigate('settings', {}));
-  head.appendChild(gear);
-  holder.appendChild(head);
+  holder.appendChild(gear);
 
+  holder.appendChild(el('h1', 'app-title', '유치부 성구암송'));
   holder.appendChild(el('p', 'app-subtitle', '판교 사랑의교회'));
 
   const menu = el('div', 'menu');
   for (const item of MENU_ITEMS) {
     const btn = el('button', 'menu-btn');
     btn.dataset.mode = item.mode;
-    btn.appendChild(el('span', 'menu-icon', item.icon));
+    const badge = el('span', 'menu-badge');
+    badge.appendChild(el('span', 'menu-icon', item.icon));
+    btn.appendChild(badge);
     btn.appendChild(el('span', 'menu-label', item.label));
+    btn.appendChild(el('span', 'menu-arrow', '›'));
     btn.addEventListener('click', item.go);
     menu.appendChild(btn);
   }
