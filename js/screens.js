@@ -395,9 +395,8 @@ function QuizScreen({ mode, month }) {
 
     current.choices.forEach((choice, i) => {
       const btn = el('button', 'choice');
-      // 성경 출처처럼 긴 선택지는 한 줄에 들어가도록 조금 작게
-      const long = choice.word.length > 8 ? ' is-long' : '';
-      btn.appendChild(el('span', `choice-word${long}`, choice.word));
+      // 길이와 상관없이 모든 선택지를 같은 크기로. 긴 것은 두 줄로 접힙니다.
+      btn.appendChild(el('span', 'choice-word', choice.word));
       btn.appendChild(el('span', 'choice-icon', '🔊'));
       btn.addEventListener('click', () => onChoice(i, btn));
       choicesEl.appendChild(btn);
