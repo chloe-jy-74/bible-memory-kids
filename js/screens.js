@@ -134,13 +134,15 @@ function ListenScreen({ month }) {
   const playIcon = el('span', 'icon', '▶');
   const playText = el('span', null, '듣기');
   playBtn.append(playIcon, playText);
+  controls.appendChild(el('p', 'play-hint', '낭독은 무한반복 됩니다'));
   controls.appendChild(playBtn);
   body.appendChild(controls);
   holder.appendChild(body);
 
   let playing = false;      // 소리가 나고 있는 중인가
   let alive = true;         // 화면이 아직 떠 있는가
-  let audio = null;         // 재생 중이거나 '일시정지된' 음원. 멈춰도 버리지 않습니다.
+  let resumeAt = 0;         // 일시정지한 자리(초). 0이면 처음부터.
+  let audio = null;         // 지금 재생 중인 음원
   let ticker = 0;           // 소절 강조를 옮기는 타이머
   let cancelCurrent = null; // 지금 재생을 끊는 방법 (일시정지 / 화면 이탈)
 
@@ -167,21 +169,38 @@ function ListenScreen({ month }) {
   }
 
   /**
-   * 지금 들고 있는 음원을 (처음이든 멈춘 자리든) 재생하고, 끝까지 가면 resolve.
+   * 음원을 from(초)부터 재생하고, 끝까지 가면 resolve.
+   *
+   * 일시정지한 음원 객체를 살려 뒀다가 다시 play() 하는 방식은 쓰지 않습니다.
+   * 화면에 붙어 있지 않은 Audio 객체는 브라우저가 버퍼를 버릴 수 있어서,
+   * play() 는 성공하는데 소리가 안 나는 일이 생깁니다(특히 아이폰 사파리).
+   * 그래서 멈춘 '자리'만 기억해 두고, 다시 들을 때는 새로 만들어 그 자리로 옮깁니다.
    *
    * 음원은 "○월 말씀 → 본문 → 출처"가 한 파일로 이어져 있습니다.
    * verses.json 의 cues 가 소절마다 [시작, 끝] 을 음원 길이 대비 비율로 담고 있어서,
-   * 재생 위치(currentTime)를 보고 지금 읽는 소절에 불을 켭니다.
-   * cues 가 없으면 소절 수로 균등 분할합니다.
+   * 재생 위치를 보고 지금 읽는 소절에 불을 켭니다. cues 가 없으면 균등 분할합니다.
    */
-  function playCurrent() {
+  function playFrom(url, from) {
     return new Promise((resolve, reject) => {
-      const a = audio;
+      const a = new Audio(url);
+      a.preload = 'auto';
+      audio = a;
+
       const cues = verse.cues;
       // 부모가 설정 화면에서 맞춘 값 (없으면 기본값)
       const lead = (store.getHighlightLead() || CONFIG.timing.highlightLeadMs) / 1000;
 
+      // 옮겨 갈 자리가 없으면 처음부터인 셈이라 바로 '완료'로 둡니다.
+      let seeked = !(from > 0.05);
+      const seek = () => {
+        if (seeked || a.readyState < 1) return;
+        try { a.currentTime = from; } catch (_) { /* 무시 */ }
+        seeked = true;
+      };
+      a.addEventListener('loadedmetadata', seek);
+
       const follow = () => {
+        if (!seeked) return;              // 자리를 옮기기 전에는 엉뚱한 소절이 켜집니다
         const total = a.duration || verse.audioSeconds || 0;
         if (!total) return;
         const at = (a.currentTime + lead) / total;
@@ -200,24 +219,34 @@ function ListenScreen({ month }) {
 
       const detach = () => {
         clearInterval(ticker);
+        a.removeEventListener('loadedmetadata', seek);
         a.onended = null;
         a.onerror = null;
       };
-      // 일시정지: 소리만 멈추고 음원은 그대로 둡니다. 다시 누르면 이 자리에서 이어집니다.
+      const stopSound = () => { try { a.pause(); } catch (_) { /* 무시 */ } };
+
+      // 일시정지: 멈춘 자리만 기억하고 음원은 버립니다.
       const halt = () => {
         detach();
-        try { a.pause(); } catch (_) { /* 무시 */ }
+        resumeAt = seeked ? a.currentTime : from;
+        stopSound();
+        audio = null;
         reject(PAUSED);
       };
-      const done = () => { detach(); release(halt); resolve(); };
+      const finish = () => { detach(); release(halt); audio = null; resolve(); };
+      const fail = () => {
+        detach(); release(halt); stopSound(); audio = null;
+        reject(new Error('음원을 재생하지 못했습니다'));
+      };
 
-      a.onended = done;
-      a.onerror = () => { detach(); release(halt); reject(new Error('음원을 재생하지 못했습니다')); };
+      a.onended = finish;
+      a.onerror = fail;
       takeOverListen(halt);
       a.play().then(() => {
+        seek();
         ticker = setInterval(follow, CONFIG.timing.highlightTickMs);
         follow();
-      }).catch(() => { detach(); release(halt); reject(new Error('음원을 재생하지 못했습니다')); });
+      }).catch(fail);
     });
   }
 
@@ -246,6 +275,7 @@ function ListenScreen({ month }) {
     pausePlayback();
     if (audio) { try { audio.pause(); } catch (_) { /* 무시 */ } }
     audio = null;
+    resumeAt = 0;
   }
 
   /** 멈출 때까지 계속 반복해서 들려줍니다. 일시정지했다면 그 자리에서 이어집니다. */
@@ -256,26 +286,26 @@ function ListenScreen({ month }) {
 
     try {
       while (alive && playing) {
+        // 끝자락에서 멈췄다면 이어 들을 게 없으니 처음부터 갑니다.
+        if (resumeAt > 0 && verse.audioSeconds && resumeAt > verse.audioSeconds - 0.3) resumeAt = 0;
+        if (resumeAt <= 0) {
+          clearHighlight();
+          card.classList.remove('is-done');
+        }
+
         if (url) {
-          if (!audio) {                    // 새로 시작하는 한 바퀴
-            audio = new Audio(url);
-            clearHighlight();
-            card.classList.remove('is-done');
-          }
           try {
-            await playCurrent();
+            await playFrom(url, resumeAt);
           } catch (err) {
             if (err === PAUSED) return;    // 자리를 기억한 채 멈춤
-            audio = null;
+            resumeAt = 0;
             await speakFallback();         // 녹음 재생 실패 → 예비 낭독
           }
         } else {
-          clearHighlight();
-          card.classList.remove('is-done');
           await speakFallback();
         }
 
-        audio = null;                      // 한 바퀴 끝 — 다음 바퀴는 처음부터
+        resumeAt = 0;                      // 한 바퀴 끝 — 다음 바퀴는 처음부터
         clearHighlight();
         card.classList.add('is-done');
         store.markListened(month);

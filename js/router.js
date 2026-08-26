@@ -19,12 +19,19 @@ export function setScreens(map, mountEl) {
 }
 
 function render() {
+  const { name } = stack[stack.length - 1] || {};
+  if (!mount || typeof screens[name] !== 'function') {
+    // setScreens() 가 안 된 라우터를 부른 경우. 보통은 같은 모듈이 두 벌 로드됐다는 뜻입니다
+    // (import 경로가 서로 달라서 — 예: './router.js' 와 './router.js?v=1').
+    console.error(`화면 "${name}" 을 열 수 없습니다. router.js 가 두 번 로드됐는지 확인하세요.`);
+    return;
+  }
   if (leaveCurrent) { leaveCurrent(); leaveCurrent = null; }
   stopSpeaking();
   clearOverlays();
   mount.innerHTML = '';
 
-  const { name, params } = stack[stack.length - 1];
+  const { params } = stack[stack.length - 1];
   const view = screens[name](params || {});
   mount.appendChild(view.el);
   leaveCurrent = view.onLeave || null;

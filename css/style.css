@@ -290,8 +290,18 @@ img { max-width: 100%; display: block; }
   margin-top: auto;
   padding-top: 22px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   flex: 0 0 auto;
+}
+
+/* 버튼 위 작은 안내 — 멈출 때까지 계속 반복된다는 것을 알려 줍니다 */
+.play-hint {
+  font-size: 21px;
+  color: var(--ink-soft);
+  text-align: center;
+  word-break: keep-all;
 }
 
 .play-btn {
