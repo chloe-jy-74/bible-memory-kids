@@ -13,7 +13,7 @@ import { getAllVerses, getVerse, getVerseAudio, getMonthImage } from './data.js'
 import { buildMonthSet, buildRandomSet, pickOne } from './questions.js';
 import {
   speak, pause, stopSpeaking, speakSequence, ignoreCancel,
-  getKoreanVoices, refreshVoice,
+  getKoreanVoices, refreshVoice, previewVoice,
 } from './speech.js';
 import * as store from './storage.js';
 import { navigate, goBack, resetTo } from './router.js';
@@ -495,13 +495,15 @@ function SettingsScreen() {
   holder.appendChild(topbar('설정', { onBack: goBack }));
   holder.appendChild(el('p', 'settings-note', '부모님용 화면이에요'));
 
-  // 아이 이름
-  // 읽어주는 목소리 — 기기마다 있는 음성이 달라서 부모가 직접 고를 수 있게 했습니다
-  holder.appendChild(el('label', 'field-label', '읽어주는 목소리'));
+  // 예비 목소리 — 앱이 말하는 모든 문장에는 녹음이 있습니다.
+  // 아래 세 가지는 녹음을 못 불러왔을 때만 쓰이는 기기 음성 설정입니다.
+  holder.appendChild(el('label', 'field-label', '예비 목소리'));
+  holder.appendChild(el('p', 'field-hint',
+    '앱의 말은 모두 녹음된 목소리예요. 아래 설정은 녹음을 못 불러왔을 때만 쓰입니다.'));
   const voices = getKoreanVoices();
   if (!voices.length) {
     holder.appendChild(el('p', 'field-hint',
-      '이 기기에는 한국어 음성이 없어요. 크롬이나 사파리로 열거나, 기기 설정에서 한국어 음성을 추가해 주세요.'));
+      '이 기기에는 한국어 음성이 없어요. 앱은 녹음으로 말하므로 그대로 쓰셔도 됩니다.'));
   } else {
     const voiceSelect = el('select', 'text-input');
     const auto = el('option', null, '자동 (부드러운 목소리 먼저)');
@@ -516,13 +518,13 @@ function SettingsScreen() {
     voiceSelect.addEventListener('change', () => {
       store.setVoiceName(voiceSelect.value);
       refreshVoice();
-      speak(CONFIG.speech.sampleText).catch(ignoreCancel);   // 고르면 바로 들려줍니다
+      previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel);   // 고르면 바로 들려줍니다
     });
     holder.appendChild(voiceSelect);
   }
 
-  // 말하기 속도
-  holder.appendChild(el('label', 'field-label', '말하기 속도'));
+  // 예비 목소리의 말하기 속도
+  holder.appendChild(el('label', 'field-label', '예비 목소리 속도'));
   const rateSeg = el('div', 'segmented');
   const nowRate = store.getSpeechRate() || CONFIG.speech.rate;
   const rateButtons = CONFIG.speech.rateOptions.map(opt => {
@@ -531,7 +533,7 @@ function SettingsScreen() {
     b.addEventListener('click', () => {
       store.setSpeechRate(opt.rate);
       rateButtons.forEach((x, i) => x.classList.toggle('is-on', CONFIG.speech.rateOptions[i].rate === opt.rate));
-      speak(CONFIG.speech.sampleText).catch(ignoreCancel);
+      previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel);
     });
     rateSeg.appendChild(b);
     return b;
@@ -557,8 +559,8 @@ function SettingsScreen() {
     '노란 칸이 소리보다 늦게 옮겨지면 「빠르게」로, 너무 앞서가면 「늦게」로 맞춰 주세요. '
     + '구절 듣기 화면에서 바로 확인됩니다.'));
 
-  // 목소리 톤 (낮을수록 차분합니다)
-  holder.appendChild(el('label', 'field-label', '목소리 톤'));
+  // 예비 목소리의 톤 (낮을수록 차분합니다)
+  holder.appendChild(el('label', 'field-label', '예비 목소리 톤'));
   const pitchSeg = el('div', 'segmented');
   const nowPitch = store.getSpeechPitch() || CONFIG.speech.pitch;
   const pitchButtons = CONFIG.speech.pitchOptions.map(opt => {
@@ -567,7 +569,7 @@ function SettingsScreen() {
     b.addEventListener('click', () => {
       store.setSpeechPitch(opt.pitch);
       pitchButtons.forEach((x, i) => x.classList.toggle('is-on', CONFIG.speech.pitchOptions[i].pitch === opt.pitch));
-      speak(CONFIG.speech.sampleText).catch(ignoreCancel);
+      previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel);
     });
     pitchSeg.appendChild(b);
     return b;
@@ -575,7 +577,7 @@ function SettingsScreen() {
   holder.appendChild(pitchSeg);
 
   const preview = el('button', 'wide-btn', '🔊 들어보기');
-  preview.addEventListener('click', () => speak(CONFIG.speech.sampleText).catch(ignoreCancel));
+  preview.addEventListener('click', () => previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel));
   holder.appendChild(preview);
 
   // 초기화

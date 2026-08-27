@@ -113,6 +113,16 @@ export function speak(text) {
   return url ? playAudioFile(url, clean) : playTts(clean);
 }
 
+/**
+ * 설정 화면의 미리듣기 전용 — 녹음 파일을 건너뛰고 반드시 TTS 로 읽습니다.
+ * speak() 을 쓰면 견본 문장에도 녹음이 있어서, 목소리·속도·톤을 바꿔도
+ * 늘 같은 녹음이 재생돼 설정이 아무 효과 없어 보입니다.
+ */
+export function previewVoice(text) {
+  const clean = (text ?? '').toString().trim();
+  return clean ? playTts(clean) : Promise.resolve();
+}
+
 /** speak() 사이의 쉬는 시간. 화면을 벗어나면 함께 취소됩니다. */
 export function pause(ms) {
   return new Promise((resolve, reject) => {
