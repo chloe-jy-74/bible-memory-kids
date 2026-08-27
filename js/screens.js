@@ -495,8 +495,9 @@ function SettingsScreen() {
   holder.appendChild(topbar('설정', { onBack: goBack }));
   holder.appendChild(el('p', 'settings-note', '부모님용 화면이에요'));
 
-  // 예비 목소리 — 앱이 말하는 모든 문장에는 녹음이 있습니다.
-  // 아래 세 가지는 녹음을 못 불러왔을 때만 쓰이는 기기 음성 설정입니다.
+  // 고른 목소리·속도·톤을 바로 귀로 확인할 수 있게, 손댈 때마다 견본 문장을 들려줍니다
+  const playSample = () => previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel);
+
   holder.appendChild(el('label', 'field-label', '예비 목소리'));
   holder.appendChild(el('p', 'field-hint',
     '앱의 말은 모두 녹음된 목소리예요. 아래 설정은 녹음을 못 불러왔을 때만 쓰입니다.'));
@@ -518,7 +519,7 @@ function SettingsScreen() {
     voiceSelect.addEventListener('change', () => {
       store.setVoiceName(voiceSelect.value);
       refreshVoice();
-      previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel);   // 고르면 바로 들려줍니다
+      playSample();   // 고르면 바로 들려줍니다
     });
     holder.appendChild(voiceSelect);
   }
@@ -532,8 +533,8 @@ function SettingsScreen() {
     b.classList.toggle('is-on', Math.abs(nowRate - opt.rate) < 0.001);
     b.addEventListener('click', () => {
       store.setSpeechRate(opt.rate);
-      rateButtons.forEach((x, i) => x.classList.toggle('is-on', CONFIG.speech.rateOptions[i].rate === opt.rate));
-      previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel);
+      rateButtons.forEach(x => x.classList.toggle('is-on', x === b));
+      playSample();
     });
     rateSeg.appendChild(b);
     return b;
@@ -549,7 +550,7 @@ function SettingsScreen() {
     b.classList.toggle('is-on', nowLead === opt.lead);
     b.addEventListener('click', () => {
       store.setHighlightLead(opt.lead);
-      leadButtons.forEach((x, i) => x.classList.toggle('is-on', CONFIG.speech.leadOptions[i].lead === opt.lead));
+      leadButtons.forEach(x => x.classList.toggle('is-on', x === b));
     });
     leadSeg.appendChild(b);
     return b;
@@ -568,8 +569,8 @@ function SettingsScreen() {
     b.classList.toggle('is-on', Math.abs(nowPitch - opt.pitch) < 0.001);
     b.addEventListener('click', () => {
       store.setSpeechPitch(opt.pitch);
-      pitchButtons.forEach((x, i) => x.classList.toggle('is-on', CONFIG.speech.pitchOptions[i].pitch === opt.pitch));
-      previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel);
+      pitchButtons.forEach(x => x.classList.toggle('is-on', x === b));
+      playSample();
     });
     pitchSeg.appendChild(b);
     return b;
@@ -577,7 +578,7 @@ function SettingsScreen() {
   holder.appendChild(pitchSeg);
 
   const preview = el('button', 'wide-btn', '🔊 들어보기');
-  preview.addEventListener('click', () => previewVoice(CONFIG.speech.sampleText).catch(ignoreCancel));
+  preview.addEventListener('click', playSample);
   holder.appendChild(preview);
 
   // 초기화

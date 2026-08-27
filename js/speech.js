@@ -2,6 +2,7 @@
  * 음성 출력 추상화.
  *
  * 앱의 다른 코드는 오직 speak(text) / pause(ms) / stopSpeaking() 만 사용합니다.
+ * (설정 화면의 미리듣기만 예외로 previewVoice() 를 써서 녹음을 건너뜁니다.)
  * 나중에 TTS → 음성파일(또는 부모 녹음)로 바꿀 때는
  * setAudioResolver() 에 함수 하나만 끼워 넣으면 됩니다. 이 파일 밖은 손대지 않습니다.
  *
@@ -37,6 +38,10 @@ function release(canceller) {
 
 /* ── 음성 목록 준비 ─────────────────────────────── */
 
+function isSpeechSupported() {
+  return typeof window !== 'undefined' && 'speechSynthesis' in window;
+}
+
 /** 이 기기에 있는 한국어 음성 목록 (설정 화면에서 고를 수 있게) */
 export function getKoreanVoices() {
   if (!isSpeechSupported()) return [];
@@ -70,17 +75,12 @@ export function refreshVoice() {
   return koVoice ? koVoice.name : '';
 }
 
-
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   loadVoices();
   speechSynthesis.addEventListener('voiceschanged', loadVoices);
 }
 
 /* ── 공개 API ───────────────────────────────────── */
-
-function isSpeechSupported() {
-  return typeof window !== 'undefined' && 'speechSynthesis' in window;
-}
 
 /** 나중에 음성파일로 교체할 때 쓰는 유일한 접점 */
 export function setAudioResolver(fn) {
@@ -106,11 +106,11 @@ export function primeSpeech() {
  * @returns {Promise<void>} 다 읽으면 resolve, 도중에 끊기면 CANCELLED로 reject
  */
 export function speak(text) {
-  const clean = (text ?? '').toString().trim();
-  if (!clean) return Promise.resolve();
+  const line = cleanText(text);
+  if (!line) return Promise.resolve();
 
-  const url = audioResolver ? audioResolver(clean) : null;
-  return url ? playAudioFile(url, clean) : playTts(clean);
+  const url = audioResolver ? audioResolver(line) : null;
+  return url ? playAudioFile(url, line) : playTts(line);
 }
 
 /**
@@ -119,8 +119,8 @@ export function speak(text) {
  * 늘 같은 녹음이 재생돼 설정이 아무 효과 없어 보입니다.
  */
 export function previewVoice(text) {
-  const clean = (text ?? '').toString().trim();
-  return clean ? playTts(clean) : Promise.resolve();
+  const line = cleanText(text);
+  return line ? playTts(line) : Promise.resolve();
 }
 
 /** speak() 사이의 쉬는 시간. 화면을 벗어나면 함께 취소됩니다. */
@@ -165,6 +165,11 @@ export function ignoreCancel(err) {
 }
 
 /* ── 내부 구현 ──────────────────────────────────── */
+
+/** 읽을 문장 다듬기. 이 형태 그대로 녹음 파일을 찾는 열쇠로도 쓰입니다. */
+function cleanText(text) {
+  return (text ?? '').toString().trim();
+}
 
 function playTts(text) {
   // 음성을 아예 못 쓰는 기기여도 앱이 멈추면 안 됩니다. 읽을 시간만큼 기다리고 넘어갑니다.
