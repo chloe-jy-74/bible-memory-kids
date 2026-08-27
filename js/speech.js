@@ -18,7 +18,6 @@ export const CANCELLED = 'cancelled';
 
 let audioResolver = null;   // (text) => url | null
 let koVoice = null;
-let voicesReady = false;
 
 /**
  * 지금 진행 중인 재생/대기를 취소하는 함수 한 개만 들고 있습니다.
@@ -63,7 +62,6 @@ function loadVoices() {
     .find(Boolean);
 
   koVoice = byName || preferred || ko.find(v => v.default) || ko[0] || null;
-  voicesReady = !!koVoice;
 }
 
 /** 설정에서 목소리를 바꾼 뒤 즉시 반영 */
@@ -72,10 +70,6 @@ export function refreshVoice() {
   return koVoice ? koVoice.name : '';
 }
 
-/** 지금 쓰고 있는 목소리 이름 */
-export function getCurrentVoiceName() {
-  return koVoice ? koVoice.name : '';
-}
 
 if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   loadVoices();
@@ -84,13 +78,8 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 
 /* ── 공개 API ───────────────────────────────────── */
 
-export function isSpeechSupported() {
+function isSpeechSupported() {
   return typeof window !== 'undefined' && 'speechSynthesis' in window;
-}
-
-/** 한국어 음성이 하나도 없는 기기인지 (부모용 안내 문구에 사용) */
-export function hasKoreanVoice() {
-  return voicesReady;
 }
 
 /** 나중에 음성파일로 교체할 때 쓰는 유일한 접점 */

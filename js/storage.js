@@ -32,24 +32,6 @@ function save() {
   } catch (_) { /* 저장 실패해도 앱은 계속 동작 */ }
 }
 
-export function getState() {
-  return { ...state };
-}
-
-/* ── 아이 이름 ─────────────────────────────────── */
-
-
-
-
-
-/* ── 현재 월 (랜덤 퀴즈 범위) ──────────────────── */
-
-
-
-/* ── 따라 읽기 방식 ────────────────────────────── */
-
-
-
 /* ── 목소리 ────────────────────────────────────── */
 
 export function getVoiceName() {
@@ -88,10 +70,6 @@ export function setSpeechPitch(pitch) {
   save();
 }
 
-/* ── 마이크 ────────────────────────────────────── */
-
-
-
 /* ── 진도 ──────────────────────────────────────── */
 
 export function markListened(month) {
@@ -110,11 +88,14 @@ export function hasCleared(month) {
   return state.cleared.includes(month);
 }
 
-
-
-
-export function resetAll() {
-  state = { ...DEFAULT_STATE, nameAsked: true, childName: state.childName };
+/**
+ * '진도 초기화' — 들은 달·완주한 달 기록만 지웁니다.
+ * 부모가 귀로 맞춘 목소리·속도·톤·노란 칸 타이밍은 그대로 둡니다
+ * (버튼 이름이 '진도'이므로 그 이상을 지우면 안 됩니다).
+ */
+export function resetProgress() {
+  state.listened = [];
+  state.cleared = [];
   save();
 }
 

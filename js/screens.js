@@ -13,7 +13,7 @@ import { getAllVerses, getVerse, getVerseAudio, getMonthImage } from './data.js'
 import { buildMonthSet, buildRandomSet, pickOne } from './questions.js';
 import {
   speak, pause, stopSpeaking, speakSequence, ignoreCancel,
-  isSpeechSupported, hasKoreanVoice, getKoreanVoices, refreshVoice,
+  getKoreanVoices, refreshVoice,
 } from './speech.js';
 import * as store from './storage.js';
 import { navigate, goBack, resetTo } from './router.js';
@@ -55,11 +55,6 @@ function MenuScreen() {
   }
   holder.appendChild(menu);
 
-  if (!isSpeechSupported() || !hasKoreanVoice()) {
-    holder.appendChild(el('p', 'notice',
-      '이 기기에 한국어 음성이 없어요. 소리가 안 나면 다른 브라우저(크롬·사파리)로 열어 주세요.'));
-  }
-
   return { el: holder };
 }
 
@@ -90,9 +85,10 @@ function MonthsScreen({ mode }) {
     num.appendChild(el('span', 'unit', '월'));
     tile.appendChild(num);
 
-    if (mode === 'quiz' && store.hasCleared(verse.month)) {
-      tile.appendChild(el('div', 'tile-badge', '★'));
-    }
+    // 이미 해 본 달에 표시를 답니다 (구절 듣기는 끝까지 들은 달, 퀴즈는 완주한 달)
+    const done = mode === 'quiz' ? store.hasCleared(verse.month)
+                                 : store.hasListened(verse.month);
+    if (done) tile.appendChild(el('div', 'tile-badge', '★'));
 
     tile.addEventListener('click', () => {
       if (mode === 'listen') navigate('listen', { month: verse.month });
@@ -582,7 +578,6 @@ function SettingsScreen() {
   preview.addEventListener('click', () => speak(CONFIG.speech.sampleText).catch(ignoreCancel));
   holder.appendChild(preview);
 
-  // 현재 월 (랜덤 퀴즈 범위)
   // 초기화
   const reset = el('button', 'danger-btn', '진도 초기화');
   let confirming = false;
@@ -596,13 +591,14 @@ function SettingsScreen() {
       }, 4000);
       return;
     }
-    store.resetAll();
+    store.resetProgress();
     resetTo([{ name: 'menu', params: {} }]);
   });
   holder.appendChild(reset);
 
   holder.appendChild(el('p', 'field-hint',
-    '진도는 이 기기에만 저장됩니다. 도감·완주 기록이 모두 지워집니다.'));
+    '들은 달과 완주한 달 기록만 지웁니다. 이 기기에만 저장되며, '
+    + '위에서 맞춘 목소리·속도·타이밍 설정은 그대로 남습니다.'));
 
   return { el: holder };
 }
