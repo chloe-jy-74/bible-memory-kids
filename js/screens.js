@@ -140,9 +140,23 @@ function ListenScreen({ month }) {
   let playing = false;      // 소리가 나고 있는 중인가
   let alive = true;         // 화면이 아직 떠 있는가
   let resumeAt = 0;         // 일시정지한 자리(초). 0이면 처음부터.
-  let audio = null;         // 지금 재생 중인 음원
   let ticker = 0;           // 소절 강조를 옮기는 타이머
   let cancelCurrent = null; // 지금 재생을 끊는 방법 (일시정지 / 화면 이탈)
+
+  /**
+   * 이 화면이 쓰는 음원 재생기 — 한 바퀴 돌 때마다 새로 만들지 않고 이것 하나만 다시 씁니다.
+   *
+   * 아이폰 사파리는 '손가락으로 누른 그 순간에 시작된 재생'만 열어 줍니다.
+   * 바퀴마다 new Audio() 를 만들면 두 번째 바퀴는 누른 사람이 없는 셈이라 막혀서,
+   * 기기(사파리 자동재생 설정·저전력 모드)에 따라 한 번만 읽고 끝나 버립니다.
+   * 같은 요소는 첫 재생이 탭으로 한 번 열리고 나면 그 뒤로 계속 재생됩니다.
+   * 화면에 붙여 두는 것은 받아 둔 소리를 사파리가 버리지 않게 하기 위해서입니다.
+   */
+  const player = new Audio();
+  player.preload = 'auto';
+  const audioUrl = getVerseAudio(month);
+  if (audioUrl) player.src = audioUrl;
+  holder.appendChild(player);
 
   const PAUSED = 'paused';
 
@@ -169,27 +183,23 @@ function ListenScreen({ month }) {
   /**
    * 음원을 from(초)부터 재생하고, 끝까지 가면 resolve.
    *
-   * 일시정지한 음원 객체를 살려 뒀다가 다시 play() 하는 방식은 쓰지 않습니다.
-   * 화면에 붙어 있지 않은 Audio 객체는 브라우저가 버퍼를 버릴 수 있어서,
-   * play() 는 성공하는데 소리가 안 나는 일이 생깁니다(특히 아이폰 사파리).
-   * 그래서 멈춘 '자리'만 기억해 두고, 다시 들을 때는 새로 만들어 그 자리로 옮깁니다.
+   * 재생기는 위에서 만든 player 하나뿐입니다(아이폰 사파리 때문 — player 설명 참고).
+   * 일시정지·반복 모두 멈춘 '자리'만 기억해 두었다가 같은 재생기를 그 자리로 옮깁니다.
    *
    * 음원은 "○월 말씀 → 본문 → 출처"가 한 파일로 이어져 있습니다.
    * verses.json 의 cues 가 소절마다 [시작, 끝] 을 음원 길이 대비 비율로 담고 있어서,
    * 재생 위치를 보고 지금 읽는 소절에 불을 켭니다. cues 가 없으면 균등 분할합니다.
    */
-  function playFrom(url, from) {
+  function playFrom(from) {
     return new Promise((resolve, reject) => {
-      const a = new Audio(url);
-      a.preload = 'auto';
-      audio = a;
+      const a = player;
 
       const cues = verse.cues;
       // 부모가 설정 화면에서 맞춘 값 (없으면 기본값)
       const lead = (store.getHighlightLead() || CONFIG.timing.highlightLeadMs) / 1000;
 
-      // 옮겨 갈 자리가 없으면 처음부터인 셈이라 바로 '완료'로 둡니다.
-      let seeked = !(from > 0.05);
+      // 같은 재생기를 다시 쓰므로, 지난 바퀴가 남긴 자리에 그대로 서 있지 않도록 늘 옮겨 놓습니다.
+      let seeked = false;
       const seek = () => {
         if (seeked || a.readyState < 1) return;
         try { a.currentTime = from; } catch (_) { /* 무시 */ }
@@ -223,25 +233,25 @@ function ListenScreen({ month }) {
       };
       const stopSound = () => { try { a.pause(); } catch (_) { /* 무시 */ } };
 
-      // 일시정지: 멈춘 자리만 기억하고 음원은 버립니다.
+      // 일시정지: 소리는 멈추고 멈춘 자리만 기억해 둡니다.
       const halt = () => {
         detach();
         resumeAt = seeked ? a.currentTime : from;
         stopSound();
-        audio = null;
         reject(PAUSED);
       };
-      const finish = () => { detach(); release(halt); audio = null; resolve(); };
+      const finish = () => { detach(); release(halt); resolve(); };
       const fail = () => {
-        detach(); release(halt); stopSound(); audio = null;
+        detach(); release(halt); stopSound();
         reject(new Error('음원을 재생하지 못했습니다'));
       };
 
       a.onended = finish;
       a.onerror = fail;
       takeOverListen(halt);
+      seek();                 // 이미 받아 둔 음원이면 소리 내기 전에 자리부터 옮깁니다
       a.play().then(() => {
-        seek();
+        seek();               // 아직 못 받았다면 여기서(또는 loadedmetadata 에서) 옮깁니다
         ticker = setInterval(follow, CONFIG.timing.highlightTickMs);
         follow();
       }).catch(fail);
@@ -271,8 +281,7 @@ function ListenScreen({ month }) {
   /** 화면을 벗어날 때 — 기억해 둔 자리까지 버립니다 */
   function stopAll() {
     pausePlayback();
-    if (audio) { try { audio.pause(); } catch (_) { /* 무시 */ } }
-    audio = null;
+    try { player.pause(); } catch (_) { /* 무시 */ }
     resumeAt = 0;
   }
 
@@ -280,7 +289,6 @@ function ListenScreen({ month }) {
   async function play() {
     if (playing) return;
     setPlaying(true);
-    const url = getVerseAudio(month);
 
     try {
       while (alive && playing) {
@@ -291,9 +299,9 @@ function ListenScreen({ month }) {
           card.classList.remove('is-done');
         }
 
-        if (url) {
+        if (audioUrl) {
           try {
-            await playFrom(url, resumeAt);
+            await playFrom(resumeAt);
           } catch (err) {
             if (err === PAUSED) return;    // 자리를 기억한 채 멈춤
             resumeAt = 0;
