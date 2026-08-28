@@ -1,28 +1,26 @@
 /**
- * 데이터 로딩 — 구절 / 문항 / 그림 매핑.
+ * 데이터 로딩 — 구절 / 문항 / 녹음 파일.
  * 구절과 문항은 JSON 파일에만 있으므로, 내용 수정은 코드를 건드리지 않고 가능합니다.
  */
 
 const VERSES_URL = 'data/verses.json';
 const QUESTIONS_URL = 'data/questions.json';
-const IMAGES_URL = 'assets/images.json';
 const AUDIO_INDEX_URL = 'data/audio-index.json';
 
 let verses = null;         // month(1~12) → 구절 객체
-let imagesByFile = null;   // 파일 경로 → 그림 정보
 let monthly = [];          // 월별 문항
 let clipByText = null;     // 읽을 문장 → 녹음 파일
 
+// 그림 경로는 verses.json 의 animal 에서 바로 나옵니다 (assets/images.json 은 앱이 읽지 않습니다 —
+// 읽으면 앱과 상관없는 파일 하나 때문에 전체가 안 뜨는 실패 지점이 생깁니다).
 export async function loadData() {
-  const [versesJson, questionsJson, imagesJson, audioJson] = await Promise.all([
+  const [versesJson, questionsJson, audioJson] = await Promise.all([
     fetchJson(VERSES_URL),
     fetchJson(QUESTIONS_URL),
-    fetchJson(IMAGES_URL),
     fetchJson(AUDIO_INDEX_URL),
   ]);
 
   verses = new Map(versesJson.months.map(v => [v.month, v]));
-  imagesByFile = new Map(imagesJson.images.map(i => [i.file, i]));
   monthly = questionsJson.monthly;
   clipByText = new Map(Object.entries(audioJson.clips)
     .map(([text, file]) => [text, `assets/${audioJson.dir}${file}`]));
@@ -55,7 +53,7 @@ export function getVerse(month) {
 
 /** 그 달의 그림 경로 */
 export function getMonthImage(month) {
-  return imageUrl(getVerse(month).animal);
+  return `assets/${getVerse(month).animal}`;
 }
 
 /** 그 달 구절의 녹음 파일 경로 */
@@ -63,7 +61,6 @@ export function getVerseAudio(month) {
   const v = getVerse(month);
   return v && v.audio ? `assets/${v.audio}` : null;
 }
-
 
 /* ── 문항 ──────────────────────────────────────── */
 
@@ -73,13 +70,4 @@ export function getMonthlyQuestions(month) {
 
 export function getAllMonthlyQuestions() {
   return monthly;
-}
-
-
-/* ── 그림 ──────────────────────────────────────── */
-
-
-
-function imageUrl(file) {
-  return `assets/${file}`;
 }

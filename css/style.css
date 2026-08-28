@@ -61,15 +61,21 @@ img { max-width: 100%; display: block; }
   max-width: var(--page-max-width);
   margin: 0 auto;
   min-height: 100vh;
+  min-height: 100dvh;   /* 사파리 주소창이 접혔다 펴져도 화면 밖으로 밀리지 않게 */
   display: flex;
   flex-direction: column;
 }
 
+/* viewport-fit=cover 를 쓰면 브라우저가 넣어 주던 안전영역 여백이 사라집니다.
+   그대로 두면 맨 아래 버튼이 사파리 툴바나 홈 인디케이터에 가려 눌리지 않습니다. */
 #screen {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 16px 16px 28px;
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
+  padding-bottom: calc(28px + env(safe-area-inset-bottom));
 }
 #screen > div { display: flex; flex-direction: column; flex: 1; position: relative; }
 

@@ -10,10 +10,13 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <!-- ?v= 는 브라우저 캐시를 비우는 표식입니다. CSS 를 고쳐 배포할 때 숫자를 올리세요.
+  <!-- 캐시는 sw.js(서비스워커)가 맡습니다. 코드와 데이터는 인터넷이 되면 언제나 최신을
+       가져오므로, js 와 json 이 서로 다른 세대로 섞이지 않습니다.
+       아래 ?v= 는 서비스워커가 아직 설치되기 전(첫 방문)과 서비스워커를 못 쓰는 브라우저를
+       위한 표식입니다. CSS 를 고쳐 배포할 때 숫자를 올리세요.
        js 모듈에는 절대 붙이지 마세요 — 캐시가 섞이면 같은 모듈이 두 벌 로드되어
        화면 전환이 통째로 멎습니다 (router.js 가 모듈 안에 상태를 들고 있기 때문). -->
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/style.css?v=10">
 </head>
 <body>
   <div id="app">

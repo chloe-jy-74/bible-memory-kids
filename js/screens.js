@@ -13,7 +13,7 @@ import { getAllVerses, getVerse, getVerseAudio, getMonthImage } from './data.js'
 import { buildMonthSet, buildRandomSet, pickOne } from './questions.js';
 import {
   speak, pause, stopSpeaking, speakSequence, ignoreCancel,
-  getKoreanVoices, refreshVoice, previewVoice,
+  getKoreanVoices, refreshVoice, previewVoice, onVoicesChanged,
 } from './speech.js';
 import * as store from './storage.js';
 import { navigate, goBack, resetTo } from './router.js';
@@ -140,7 +140,6 @@ function ListenScreen({ month }) {
   let playing = false;      // 소리가 나고 있는 중인가
   let alive = true;         // 화면이 아직 떠 있는가
   let resumeAt = 0;         // 일시정지한 자리(초). 0이면 처음부터.
-  let ticker = 0;           // 소절 강조를 옮기는 타이머
   let cancelCurrent = null; // 지금 재생을 끊는 방법 (일시정지 / 화면 이탈)
 
   /**
@@ -194,6 +193,10 @@ function ListenScreen({ month }) {
     return new Promise((resolve, reject) => {
       const a = player;
 
+      let settled = false;
+      let ticker = 0;
+      let shown = -2;     // 마지막으로 불을 켠 소절 (-1 은 '인트로'라 실제 값입니다)
+
       const cues = verse.cues;
       // 부모가 설정 화면에서 맞춘 값 (없으면 기본값)
       const lead = (store.getHighlightLead() || CONFIG.timing.highlightLeadMs) / 1000;
@@ -207,6 +210,14 @@ function ListenScreen({ month }) {
       };
       a.addEventListener('loadedmetadata', seek);
 
+      // 소절이 실제로 바뀔 때만 화면을 고칩니다.
+      // (틱은 1초에 스물몇 번 돌지만 소절은 몇 초에 한 번 넘어갑니다.)
+      const show = (index) => {
+        if (index === shown) return;
+        shown = index;
+        highlight(index);
+      };
+
       const follow = () => {
         if (!seeked) return;              // 자리를 옮기기 전에는 엉뚱한 소절이 켜집니다
         const total = a.duration || verse.audioSeconds || 0;
@@ -214,15 +225,18 @@ function ListenScreen({ month }) {
         const at = (a.currentTime + lead) / total;
 
         if (!cues) {
-          highlight(Math.min(lineEls.length - 1, Math.floor(at * lineEls.length)));
+          show(Math.min(lineEls.length - 1, Math.floor(at * lineEls.length)));
           return;
         }
         // 출처를 읽기 시작하면 출처에 불을 켭니다.
-        if (verse.refAt != null && at >= verse.refAt) { highlight(lineEls.length); return; }
+        if (verse.refAt != null && at >= verse.refAt) { show(lineEls.length); return; }
         // 마지막으로 시작 지점을 지난 소절. 첫 소절 전(인트로)이면 -1 → 아무 데도 안 켜집니다.
         let now = -1;
-        for (let i = 0; i < cues.length; i++) if (at >= cues[i][0]) now = i;
-        highlight(now);
+        for (let i = 0; i < cues.length; i++) {
+          if (at < cues[i][0]) break;     // cues 는 시간순 — 더 볼 필요가 없습니다
+          now = i;
+        }
+        show(now);
       };
 
       const detach = () => {
@@ -233,24 +247,34 @@ function ListenScreen({ month }) {
       };
       const stopSound = () => { try { a.pause(); } catch (_) { /* 무시 */ } };
 
-      // 일시정지: 소리는 멈추고 멈춘 자리만 기억해 둡니다.
-      const halt = () => {
+      // 재생기·타이머를 한 바퀴마다 다시 쓰므로, 이 바퀴는 딱 한 번만 끝나야 합니다.
+      // 이 빗장이 없으면 늦게 도착한 취소가 '다음 바퀴'의 타이머와 소리를 꺼 버립니다
+      // (버튼은 재생 중인데 소리도 노란 칸도 멎는 상태).
+      const once = (fn) => () => {
+        if (settled) return;
+        settled = true;
         detach();
+        fn();
+      };
+
+      // 일시정지: 소리는 멈추고 멈춘 자리만 기억해 둡니다.
+      const halt = once(() => {
         resumeAt = seeked ? a.currentTime : from;
         stopSound();
         reject(PAUSED);
-      };
-      const finish = () => { detach(); release(halt); resolve(); };
-      const fail = () => {
-        detach(); release(halt); stopSound();
+      });
+      const finish = once(() => { release(halt); resolve(); });
+      const fail = once(() => {
+        release(halt); stopSound();
         reject(new Error('음원을 재생하지 못했습니다'));
-      };
+      });
 
       a.onended = finish;
       a.onerror = fail;
       takeOverListen(halt);
       seek();                 // 이미 받아 둔 음원이면 소리 내기 전에 자리부터 옮깁니다
       a.play().then(() => {
+        if (settled) return;  // 재생이 열리는 사이에 이미 멈췄다면 여기서 끝
         seek();               // 아직 못 받았다면 여기서(또는 loadedmetadata 에서) 옮깁니다
         ticker = setInterval(follow, CONFIG.timing.highlightTickMs);
         follow();
@@ -413,6 +437,7 @@ function QuizScreen({ mode, month }) {
     if (locked || dropped.has(i) || !canTapChoice()) return;
     chosen = i;
     [...choicesEl.children].forEach((node, n) => {
+      if (dropped.has(n)) return;   // 이미 틀린 칸은 흐린 채로 둡니다 (🔊 가 되살아나면 눌러도 되는 줄 압니다)
       node.classList.toggle('is-picked', n === i);
       node.querySelector('.choice-icon').textContent = n === i ? '✓' : '🔊';
     });
@@ -509,11 +534,24 @@ function SettingsScreen() {
   holder.appendChild(el('label', 'field-label', '예비 목소리'));
   holder.appendChild(el('p', 'field-hint',
     '앱의 말은 모두 녹음된 목소리예요. 아래 설정은 녹음을 못 불러왔을 때만 쓰입니다.'));
-  const voices = getKoreanVoices();
-  if (!voices.length) {
-    holder.appendChild(el('p', 'field-hint',
-      '이 기기에는 한국어 음성이 없어요. 앱은 녹음으로 말하므로 그대로 쓰셔도 됩니다.'));
-  } else {
+  // 안드로이드 크롬은 음성 목록을 늦게 받아옵니다. 앱을 막 켜고 바로 들어오면 목록이 비어 있어서,
+  // 목록이 도착하면(voiceschanged) 이 칸만 다시 그립니다.
+  const voiceBox = el('div');
+  holder.appendChild(voiceBox);
+
+  function renderVoices() {
+    const voices = getKoreanVoices();
+    // 목록을 한 번 그린 뒤에는 다시 그리지 않습니다.
+    // (고르는 중에 select 가 손가락 밑에서 닫히면 안 되니까요. 또 안드로이드 크롬은
+    //  voiceschanged 를 여러 번 보내면서 잠깐 빈 목록을 주기도 하는데,
+    //  그때 이미 그려 둔 목록이 '음성이 없어요' 로 바뀌면 안 됩니다.)
+    if (voiceBox.querySelector('select')) return;
+    voiceBox.innerHTML = '';
+    if (!voices.length) {
+      voiceBox.appendChild(el('p', 'field-hint',
+        '이 기기에는 한국어 음성이 없어요. 앱은 녹음으로 말하므로 그대로 쓰셔도 됩니다.'));
+      return;
+    }
     const voiceSelect = el('select', 'text-input');
     const auto = el('option', null, '자동 (부드러운 목소리 먼저)');
     auto.value = '';
@@ -529,8 +567,10 @@ function SettingsScreen() {
       refreshVoice();
       playSample();   // 고르면 바로 들려줍니다
     });
-    holder.appendChild(voiceSelect);
+    voiceBox.appendChild(voiceSelect);
   }
+  renderVoices();
+  const stopWatchingVoices = onVoicesChanged(renderVoices);
 
   // 예비 목소리의 말하기 속도
   holder.appendChild(el('label', 'field-label', '예비 목소리 속도'));
@@ -592,16 +632,18 @@ function SettingsScreen() {
   // 초기화
   const reset = el('button', 'danger-btn', '진도 초기화');
   let confirming = false;
+  let confirmTimer = 0;
   reset.addEventListener('click', () => {
     if (!confirming) {
       confirming = true;
       reset.textContent = '정말 지울까요? 한 번 더 누르세요';
-      setTimeout(() => {
+      confirmTimer = setTimeout(() => {
         confirming = false;
         reset.textContent = '진도 초기화';
       }, 4000);
       return;
     }
+    clearTimeout(confirmTimer);
     store.resetProgress();
     resetTo([{ name: 'menu', params: {} }]);
   });
@@ -611,7 +653,13 @@ function SettingsScreen() {
     '들은 달과 완주한 달 기록만 지웁니다. 이 기기에만 저장되며, '
     + '위에서 맞춘 목소리·속도·타이밍 설정은 그대로 남습니다.'));
 
-  return { el: holder };
+  return {
+    el: holder,
+    onLeave() {
+      stopWatchingVoices();
+      clearTimeout(confirmTimer);
+    },
+  };
 }
 
 /* ══════════════════════════════════════════════════ */

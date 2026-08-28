@@ -20,10 +20,33 @@ function load() {
   try {
     const raw = localStorage.getItem(CONFIG.storageKey);
     if (!raw) return { ...DEFAULT_STATE };
-    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+    return normalize(JSON.parse(raw));   // 빠진 값은 normalize 가 기본값으로 채웁니다
   } catch (_) {
     return { ...DEFAULT_STATE };
   }
+}
+
+/**
+ * 저장값이 깨져 있어도 앱은 그대로 떠야 합니다.
+ * JSON 은 읽혔지만 타입이 어긋난 경우(예: listened 가 null)를 기본값으로 되돌립니다 —
+ * 이걸 그냥 두면 월 선택 화면이 그리다 말고 빈 채로 남고, 새로고침해도 계속 깨집니다.
+ *
+ * 어떤 값이 있어야 하는지는 DEFAULT_STATE 하나만 봅니다.
+ * 설정을 새로 추가할 때 여기를 같이 고칠 필요가 없습니다.
+ */
+function normalize(s) {
+  const out = {};
+  for (const [key, fallback] of Object.entries(DEFAULT_STATE)) {
+    const v = s[key];
+    if (Array.isArray(fallback)) {
+      out[key] = Array.isArray(v) ? v.filter(Number.isInteger) : [...fallback];
+    } else if (typeof fallback === 'number') {
+      out[key] = typeof v === 'number' && isFinite(v) ? v : fallback;
+    } else {
+      out[key] = typeof v === typeof fallback ? v : fallback;
+    }
+  }
+  return out;
 }
 
 function save() {
