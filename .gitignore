@@ -1,1 +1,13 @@
 .DS_Store
+
+# 배포에 들어가지 않는 작업 자료 (내 컴퓨터에는 그대로 남습니다)
+questions (*).json
+전체구절.docx
+성구암송앱_기획서_v2.md
+월별암송파일/
+.claude/
+
+# 문서·개발 메모는 배포에도 저장소에도 올리지 않습니다.
+# (GitHub Pages 가 폴더를 통째로 서빙해서, 올리면 사이트 주소로도 그대로 열립니다.)
+/README.md
+/assets/README.md
