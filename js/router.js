@@ -5,7 +5,7 @@
  * 화면을 떠날 때는 항상 음성·마이크·연출을 정리합니다.
  */
 
-import { stopSpeaking } from './speech.js';
+import { stopSpeaking, ignoreCancel } from './speech.js';
 import { clearOverlays } from './ui.js';
 
 /**
@@ -71,7 +71,21 @@ function render() {
   leaveCurrent = view.onLeave || null;
   mount.scrollTop = 0;
   window.scrollTo(0, 0);
-  if (view.onEnter) view.onEnter();
+  // onEnter 는 대부분 async 입니다. 안에서 난 오류를 여기서 받지 않으면
+  // 콘솔에도 안 남는 채로 화면만 멎습니다.
+  if (view.onEnter) {
+    const entered = view.onEnter();
+    if (entered && entered.catch) entered.catch(ignoreCancel);
+  }
+}
+
+/** 같은 화면인가 (연타로 같은 곳에 두 번 들어가는 것을 막는 데 씁니다) */
+function isSame(entry, name, params) {
+  if (!entry || entry.name !== name) return false;
+  const a = entry.params || {};
+  const b = params || {};
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every(k => a[k] === b[k]);
 }
 
 export function start(name, params) {
@@ -83,6 +97,11 @@ export function start(name, params) {
 }
 
 export function navigate(name, params) {
+  // 유아가 버튼을 두 번 두드리면(touch-action: manipulation 이라 더블탭도 click 두 번입니다)
+  // 같은 화면이 히스토리에 두 번 쌓여, 뒤로가기를 눌러도 화면이 그대로인 것처럼 보입니다.
+  // 지금 보고 있는 화면과 같은 곳이면 아무것도 하지 않습니다.
+  if (isSame(stack[index], name, params)) return;
+
   // 뒤로 간 자리에서 새로 이동하면 앞쪽에 남아 있던 화면들은 버립니다 (브라우저와 같은 규칙).
   stack.length = index + 1;
   stack.push({ name, params });

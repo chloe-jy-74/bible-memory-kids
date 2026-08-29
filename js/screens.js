@@ -12,8 +12,9 @@ import { CONFIG } from './config.js';
 import { getAllVerses, getVerse, getVerseAudio, getMonthImage } from './data.js';
 import { buildMonthSet, buildRandomSet, pickOne } from './questions.js';
 import {
-  speak, pause, stopSpeaking, speakSequence, ignoreCancel,
+  speak, speakTts, pause, stopSpeaking, speakSequence, ignoreCancel,
   getKoreanVoices, refreshVoice, previewVoice, onVoicesChanged,
+  getVersePlayer, onWake,
 } from './speech.js';
 import * as store from './storage.js';
 import { navigate, goBack, resetTo } from './router.js';
@@ -143,19 +144,19 @@ function ListenScreen({ month }) {
   let cancelCurrent = null; // 지금 재생을 끊는 방법 (일시정지 / 화면 이탈)
 
   /**
-   * 이 화면이 쓰는 음원 재생기 — 한 바퀴 돌 때마다 새로 만들지 않고 이것 하나만 다시 씁니다.
+   * 음원 재생기 — 화면마다 만들지 않고 앱이 계속 들고 있는 것 하나를 빌려 씁니다.
    *
-   * 아이폰 사파리는 '손가락으로 누른 그 순간에 시작된 재생'만 열어 줍니다.
-   * 바퀴마다 new Audio() 를 만들면 두 번째 바퀴는 누른 사람이 없는 셈이라 막혀서,
-   * 기기(사파리 자동재생 설정·저전력 모드)에 따라 한 번만 읽고 끝나 버립니다.
-   * 같은 요소는 첫 재생이 탭으로 한 번 열리고 나면 그 뒤로 계속 재생됩니다.
-   * 화면에 붙여 두는 것은 받아 둔 소리를 사파리가 버리지 않게 하기 위해서입니다.
+   * 아이폰 사파리는 '손가락으로 누른 그 순간에 시작된 재생'만 열어 주는데,
+   * 열리는 것은 그 <audio> 요소 하나입니다. 화면에 들어올 때마다 new Audio() 를 만들면
+   * 손가락과 상관없는 길로 들어온 경우 — 오른쪽 가장자리 스와이프(앞으로가기),
+   * 화면을 되살리는 popstate — 는 누른 사람이 없는 셈이라 재생이 막히고,
+   * 성우 녹음 대신 기계 음성이 나옵니다.
+   * primeSpeech() 가 첫 탭에서 이 요소를 열어 두므로, 빌려 쓰면 그 문제가 없습니다.
+   * (speech.js 의 문장 재생기와는 다른 요소입니다 — 서로 자리를 빼앗지 않게.)
    */
-  const player = new Audio();
-  player.preload = 'auto';
+  const player = getVersePlayer();
   const audioUrl = getVerseAudio(month);
   if (audioUrl) player.src = audioUrl;
-  holder.appendChild(player);
 
   const PAUSED = 'paused';
 
@@ -241,6 +242,7 @@ function ListenScreen({ month }) {
 
       const detach = () => {
         clearInterval(ticker);
+        unwake();
         a.removeEventListener('loadedmetadata', seek);
         a.onended = null;
         a.onerror = null;
@@ -269,6 +271,15 @@ function ListenScreen({ month }) {
         reject(new Error('음원을 재생하지 못했습니다'));
       });
 
+      // 화면이 잠기거나 앱이 뒤로 가면 아이폰은 소리를 멈춰 둔 채 아무것도 알려주지 않습니다.
+      // 그대로 두면 버튼은 '일시정지'인데 소리도 노란 칸도 멎어 있습니다.
+      // 돌아왔을 때 이어서 재생하고, 그것마저 막히면 실제로 '일시정지'로 돌려 표시를 맞춥니다.
+      const unwake = onWake(() => {
+        if (settled || a.ended || !a.paused) return;
+        const again = a.play();
+        if (again && again.catch) again.catch(() => pausePlayback());
+      });
+
       a.onended = finish;
       a.onerror = fail;
       takeOverListen(halt);
@@ -282,14 +293,21 @@ function ListenScreen({ month }) {
     });
   }
 
-  /** 녹음이 없을 때만 쓰는 예비 낭독 (브라우저 TTS — 이어 듣기는 안 되고 소절부터 다시 읽습니다) */
+  /**
+   * 녹음이 없거나 재생에 실패했을 때만 쓰는 예비 낭독.
+   * (이어 듣기는 안 되고 소절 처음부터 다시 읽습니다.)
+   *
+   * 반드시 브라우저 음성으로만 읽습니다 — speak() 을 쓰면 퀴즈 선택지와 글자가 똑같은
+   * 소절(2월은 네 소절 중 셋)만 성우 녹음으로 나가서 한 구절 안에서 목소리가 튑니다.
+   */
   async function speakFallback() {
     await speakSequence(verse.lines, {
       gapMs: CONFIG.timing.lineGapMs,
       onLine: highlight,
+      tts: true,
     });
     highlight(lineEls.length);
-    await speak(verse.refSpeech || verse.ref);
+    await speakTts(verse.refSpeech || verse.ref);
   }
 
   function takeOverListen(fn) { cancelCurrent = fn; }
@@ -364,12 +382,28 @@ function ListenScreen({ month }) {
    3~4. 퀴즈 (월별 / 랜덤 공용)
    ══════════════════════════════════════════════════ */
 
+/**
+ * 문항이 하나도 없을 때 (data/questions.json 을 고치다 그 달을 비웠거나 month 를 잘못 적은 경우).
+ * 그냥 두면 paint() 가 없는 문항을 읽다 멈춰 흰 화면만 남고, 뒤로가기 말고는 나갈 길이 없습니다.
+ */
+function EmptyQuizScreen(title) {
+  const holder = el('div');
+  holder.appendChild(topbar(title, { onBack: goBack }));
+  const body = el('div', 'quiz');
+  body.appendChild(el('p', 'notice', '아직 문제가 준비되지 않았어요.'));
+  holder.appendChild(body);
+  return { el: holder };
+}
+
 function QuizScreen({ mode, month }) {
   const isRandom = mode === 'random';
   const set = isRandom ? buildRandomSet() : buildMonthSet(month);
+  const title = isRandom ? '랜덤 퀴즈' : `${month}월 퀴즈`;
+
+  if (!set.length) return EmptyQuizScreen(title);
 
   const holder = el('div');
-  holder.appendChild(topbar(isRandom ? '랜덤 퀴즈' : `${month}월 퀴즈`, { onBack: goBack }));
+  holder.appendChild(topbar(title, { onBack: goBack }));
 
   const body = el('div', 'quiz');
 
@@ -446,8 +480,10 @@ function QuizScreen({ mode, month }) {
   }
 
   async function ask() {
-    paint();
+    // paint() 까지 try 안에 둡니다. 밖에 두면 여기서 난 오류가 onEnter 의 프라미스로 새어
+    // 콘솔에도 안 남는 흰 화면이 됩니다.
     try {
+      paint();
       if (index === 0) {
         await speak('문제를 잘 듣고, 답을 눌러 보세요.');   // 세션의 첫 문제에서만
         await pause(CONFIG.timing.questionGapMs);

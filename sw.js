@@ -25,15 +25,19 @@
  * 캐시 우선이라, 이미 받아 둔 기기는 VERSION 이 바뀌지 않는 한 옛 파일을 계속 씁니다.
  */
 
-const VERSION = 'v1';
-const CACHE = `bible-memory-${VERSION}`;
+const VERSION = 'v2';
+const CACHE_PREFIX = 'bible-memory-';
+const CACHE = `${CACHE_PREFIX}${VERSION}`;
+
+/** 느린 네트워크를 이만큼만 기다리고 캐시로 넘어갑니다 (아래 networkFirst 설명 참고) */
+const NETWORK_TIMEOUT_MS = 2500;
 
 /** 처음 켤 때 미리 받아 두는 앱의 뼈대. 소리·그림은 무겁기 때문에 여기 넣지 않고 쓸 때 받습니다. */
 const SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './css/style.css',   // ?v= 없이 넣어 둡니다 — CSS 버전을 올려도 이 파일은 안 고쳐도 됩니다
+  './css/style.css',   // ?v= 없이 넣어 둡니다 — 캐시 열쇠에서 표식을 떼므로(cacheKey) 자리는 하나입니다
   './js/app.js',
   './js/config.js',
   './js/data.js',
@@ -62,8 +66,13 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
+    // 반드시 우리 이름표가 붙은 것만 지웁니다.
+    // 캐시 저장소는 폴더가 아니라 주소(오리진) 단위로 공유되기 때문에,
+    // 그냥 전부 지우면 같은 계정의 다른 GitHub Pages 프로젝트 캐시까지 날아갑니다.
     const names = await caches.keys();
-    await Promise.all(names.map(n => (n === CACHE ? null : caches.delete(n))));
+    await Promise.all(names
+      .filter(n => n.startsWith(CACHE_PREFIX) && n !== CACHE)
+      .map(n => caches.delete(n)));
     await self.clients.claim();
   })());
 });
@@ -74,6 +83,20 @@ const isMedia = (path) => /\.(mp3|png|jpg|jpeg|webp|svg|ico)$/i.test(path);
 const fromCache = (req) => caches.match(req, { ignoreSearch: true });
 
 /**
+ * 캐시 열쇠 — ?v= 같은 표식을 떼어 파일 하나당 한 자리만 씁니다.
+ *
+ * 떼지 않으면 같은 파일이 두 자리를 차지합니다. 미리 받아 두는 SHELL 은 표식 없이
+ * ('css/style.css'), 화면이 실제로 요청하는 것은 표식과 함께('css/style.css?v=10')
+ * 담기기 때문입니다. 그러면 ignoreSearch 로 꺼낼 때 먼저 담긴 쪽 — 설치 시점의 옛 파일 —
+ * 이 나와서, 인터넷이 끊겼을 때만 옛 스타일로 뜨는 일이 생깁니다.
+ */
+const cacheKey = (req) => {
+  const url = new URL(req.url);
+  url.search = '';
+  return new Request(url.toString());
+};
+
+/**
  * 캐시에 넣기 — 무엇을 담을지 정하는 규칙은 여기 한 곳입니다.
  * 응답을 기다리게 하지 않으려고 결과를 기다리지 않고 넘어갑니다.
  */
@@ -81,7 +104,7 @@ function putInCache(req, res) {
   if (!res || !res.ok || res.type !== 'basic') return;
   const copy = res.clone();
   caches.open(CACHE)
-    .then(cache => cache.put(req, copy))
+    .then(cache => cache.put(cacheKey(req), copy))
     .catch(() => { /* 캐시에 못 넣어도 화면은 그대로 뜹니다 */ });
 }
 
@@ -180,25 +203,58 @@ function parseRange(header, size) {
   return { start, end };
 }
 
-/** 코드·데이터 — 인터넷이 되면 언제나 최신 */
+/**
+ * 코드·데이터 — 인터넷이 되면 언제나 최신.
+ *
+ * 다만 '연결은 됐는데 인터넷이 없는' 와이파이(교회 게스트망, 캡티브 포털, 지하)에서는
+ * fetch 가 스스로 실패하지 않고 OS 기본 시간(30~75초)까지 매달립니다.
+ * 이 길로 js 아홉 개가 전부 들어오므로, 받아 둔 게 다 있어도 앱이 1분 가까이 안 뜹니다.
+ * (완전히 끊긴 기내 모드는 fetch 가 즉시 실패해서 오히려 잘 돌아갑니다 — 어중간한 쪽이 더 나쁩니다.)
+ * 그래서 잠깐만 기다려 보고 받아 둔 것으로 엽니다.
+ */
 async function networkFirst(req) {
+  const net = fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' });
+  net.catch(() => { /* 아래에서 다룹니다 — 여기서 한 번 받아 두지 않으면 콘솔에 경고가 남습니다 */ });
+
+  let res;
   try {
     // no-cache: 브라우저의 10분짜리 캐시를 건너뛰고 서버에 다시 물어봅니다.
     // 바뀐 게 없으면 서버가 304 만 돌려주므로 값은 거의 들지 않습니다.
-    const res = await fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' });
-    // 서버에 닿긴 했지만 파일이 없거나(404, 배포 중) 로그인 화면이 대신 온 경우입니다.
-    // 이건 '최신'이 아니라 사고이므로, 받아 둔 게 있으면 그걸 씁니다.
-    if (!res.ok) {
-      const hit = await fromCache(req);
-      if (hit) return hit;
-    }
-    putInCache(req, res);
-    return res;
+    res = await withTimeout(net, NETWORK_TIMEOUT_MS);
   } catch (_) {
     const hit = await fromCache(req);
-    if (hit) return hit;
-    throw new Error('오프라인이고 캐시에도 없습니다');
+    if (hit) {
+      // 늦게 도착할 응답은 다음을 위해 캐시만 채워 둡니다.
+      net.then(late => putInCache(req, late)).catch(() => { /* 무시 */ });
+      return hit;
+    }
+    // 캐시에도 없으면 어쩔 수 없이 끝까지 기다립니다.
+    try {
+      res = await net;
+    } catch (__) {
+      throw new Error('오프라인이고 캐시에도 없습니다');
+    }
   }
+
+  // 서버에 닿긴 했지만 파일이 없거나(404, 배포 중) 로그인 화면이 대신 온 경우입니다.
+  // 이건 '최신'이 아니라 사고이므로, 받아 둔 게 있으면 그걸 씁니다.
+  if (!res.ok) {
+    const hit = await fromCache(req);
+    if (hit) return hit;
+  }
+  putInCache(req, res);
+  return res;
+}
+
+/** ms 안에 안 오면 거절합니다 (원래 요청은 그대로 두고 결과만 먼저 포기합니다) */
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('네트워크가 너무 느립니다')), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
 }
 
 /** 소리·그림 — 한 번 받으면 다시 받지 않음 */
